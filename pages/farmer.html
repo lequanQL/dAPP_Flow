@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Flow tác nhân Farmer – Coffee Robusta dApp</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #222; margin: 40px; }
+    h1, h2 { color: #4B2E05; }
+    h1 { border-bottom: 2px solid #C49A6C; padding-bottom: 8px; }
+    code, pre { background-color: #f4f4f4; padding: 4px 6px; border-radius: 4px; }
+    section { margin-bottom: 40px; }
+    ul { margin-left: 20px; }
+    .highlight { color: #C49A6C; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>☕ Coffee Robusta dApp – Flow cho tác nhân Farmer</h1>
+
+<section>
+  <h2>🔧 Tổng quan</h2>
+  <p>Luồng hoạt động chi tiết của tác nhân <span class="highlight">Farmer</span> trong hệ thống Coffee Robusta dApp, từ bước khởi tạo đến hiển thị truy xuất nguồn gốc.</p>
+  <ul>
+    <li><strong>Frontend (Presentation Layer):</strong> Giao diện người dùng.</li>
+    <li><strong>Smart Contract (Blockchain):</strong> Xử lý logic và lưu trữ dữ liệu bất biến.</li>
+    <li><strong>Offchain DB:</strong> Lưu metadata, lịch sử và thông tin người dùng.</li>
+    <li><strong>IPFS:</strong> Lưu trữ chứng từ và hình ảnh ngoài chuỗi.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>1️⃣ Khởi tạo và xác thực</h2>
+  <p><strong>Mục tiêu:</strong> Xác thực Farmer là người dùng hợp lệ trước khi ghi dữ liệu lên blockchain.</p>
+  <ul>
+    <li>Farmer mở dApp → Frontend hiển thị nút <strong>Connect Wallet</strong>.</li>
+    <li>Farmer kết nối ví Metamask → gọi <code>window.ethereum.request({ method: 'eth_requestAccounts' })</code>.</li>
+    <li>Frontend gửi địa chỉ ví đến <strong>Offchain DB (Agent Table)</strong> để kiểm tra:</li>
+    <pre><code>SELECT role FROM Agent WHERE walletAddress = '0x...';</code></pre>
+    <li>Nếu <code>role = FARMER</code>, cho phép truy cập các chức năng tạo lô hàng.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2️⃣ Tạo lô hàng mới (Create Lot)</h2>
+  <p><strong>Mục tiêu:</strong> Ghi nhận thông tin vùng trồng và khởi tạo lô hàng trên blockchain.</p>
+  <ul>
+    <li>Farmer nhập dữ liệu vùng trồng (<code>FarmData</code>): giống, diện tích, tọa độ, ngày gieo trồng.</li>
+    <li>Frontend gửi dữ liệu đến <strong>Offchain API</strong> → lưu tạm vào bảng <code>CoffeeLot</code>:</li>
+    <pre><code>INSERT INTO CoffeeLot (lotId, farmerWallet, farmName, harvestDate, quantity, ipfsHash)
+VALUES (...);</code></pre>
+    <li>Upload dữ liệu lên <strong>IPFS</strong> → nhận <code>ipfsHash</code>.</li>
+    <li>Gọi hàm smart contract:</li>
+    <pre><code>createLot(lotId, ipfsHash);</code></pre>
+    <li>Blockchain ghi nhận trạng thái <code>LotStatus.Created</code> trong <code>SupplyChainLot</code>.</li>
+    <li>Transaction hash (<code>txHash</code>) và block timestamp được trả về → lưu vào Offchain DB.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3️⃣ Cập nhật trạng thái thu hoạch (Harvested)</h2>
+  <p><strong>Mục tiêu:</strong> Farmer xác nhận lô hàng đã thu hoạch.</p>
+  <ul>
+    <li>Farmer nhập thông tin sản lượng, ngày thu hoạch, độ ẩm.</li>
+    <li>Frontend lưu dữ liệu vào bảng <code>LotSegment</code> với <code>segmentType = 'Harvest'</code>.</li>
+    <li>Upload báo cáo chất lượng lên IPFS → nhận <code>ipfsHash</code>.</li>
+    <li>Gọi hàm smart contract:</li>
+    <pre><code>updateStatus(lotId, LotStatus.Harvested, ipfsHash);</code></pre>
+    <li>Blockchain cập nhật <code>currentStatus</code> của <code>SupplyChainLot</code>.</li>
+    <li>Offchain DB ghi nhận <code>txHash</code>, <code>blockchainTimestamp</code> vào <code>LotTimeline</code>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4️⃣ Đồng bộ dữ liệu Onchain ↔ Offchain</h2>
+  <p><strong>Mục tiêu:</strong> Đảm bảo dữ liệu hiển thị cho người dùng luôn khớp với blockchain.</p>
+  <ul>
+    <li>Frontend định kỳ gọi hàm <code>getLotData(lotId)</code> từ smart contract.</li>
+    <li>Nhận dữ liệu <code>SupplyChainLot</code> → parse thành JSON.</li>
+    <li>So sánh với bản ghi trong <code>CoffeeLot</code> và <code>LotTimeline</code>.</li>
+    <li>Nếu có chênh lệch, cập nhật Offchain DB bằng <code>txHash</code> mới nhất.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5️⃣ Hiển thị truy xuất nguồn gốc</h2>
+  <p><strong>Mục tiêu:</strong> Cho phép Farmer và các bên khác xem toàn bộ lịch sử lô hàng.</p>
+  <ul>
+    <li>Frontend truy vấn <code>LotTimeline</code> theo <code>lotId</code>.</li>
+    <li>Hiển thị chuỗi trạng thái: <code>Created → Harvested → Processed → Exported → Received</code>.</li>
+    <li>Mỗi trạng thái liên kết với <code>txHash</code> và <code>ipfsHash</code> để xem chi tiết chứng từ.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>🔗 Tổng kết</h2>
+  <ul>
+    <li><strong>Onchain:</strong> Lưu trữ dữ liệu bất biến (<code>LotStatus</code>, <code>SupplyChainLot</code>, <code>ipfsHash</code>).</li>
+    <li><strong>Offchain:</strong> Lưu metadata, thông tin người dùng, và lịch sử giao dịch (<code>CoffeeLot</code>, <code>LotTimeline</code>).</li>
+    <li><strong>Farmer:</strong> Là tác nhân khởi đầu chuỗi, tạo dữ liệu nền tảng cho toàn bộ hệ thống truy xuất.</li>
+  </ul>
+</section>
+
+</body>
+</html>
