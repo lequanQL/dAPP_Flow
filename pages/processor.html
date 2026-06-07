@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Flow tác nhân Processor – Coffee Robusta dApp</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #222; margin: 40px; }
+    h1, h2 { color: #4B2E05; }
+    h1 { border-bottom: 2px solid #C49A6C; padding-bottom: 8px; }
+    code, pre { background-color: #f4f4f4; padding: 4px 6px; border-radius: 4px; }
+    section { margin-bottom: 40px; }
+    ul { margin-left: 20px; }
+    .highlight { color: #C49A6C; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>🏭 Coffee Robusta dApp – Flow cho tác nhân Processor</h1>
+
+<section>
+  <h2>🔧 Tổng quan</h2>
+  <p>Luồng hoạt động chi tiết của tác nhân <span class="highlight">Processor</span> trong hệ thống Coffee Robusta dApp, từ bước nhận lô hàng đã kiểm định đến cập nhật dữ liệu rang xay. Processor chịu trách nhiệm xử lý, rang và chuẩn bị cà phê cho xuất khẩu.</p>
+  <ul>
+    <li><strong>Frontend (Presentation Layer):</strong> Giao diện nhập dữ liệu rang xay và xử lý.</li>
+    <li><strong>Smart Contract (Blockchain):</strong> Cập nhật trạng thái lô hàng và lưu thông tin rang xay.</li>
+    <li><strong>Offchain DB:</strong> Lưu dữ liệu chi tiết mẻ rang, điểm cupping và phân loại phẩm cấp.</li>
+    <li><strong>IPFS:</strong> Lưu trữ hồ sơ rang và chứng từ kiểm định chất lượng.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>1️⃣ Xác nhận quyền truy cập</h2>
+  <p><strong>Mục tiêu:</strong> Đảm bảo Processor là người có quyền xử lý lô hàng.</p>
+  <ul>
+    <li>Processor mở dApp → Frontend hiển thị nút <strong>Connect Wallet</strong>.</li>
+    <li>Kết nối ví Metamask → gọi <code>window.ethereum.request({ method: 'eth_requestAccounts' })</code>.</li>
+    <li>Frontend kiểm tra vai trò trong bảng <code>Agent</code>:</li>
+    <pre><code>SELECT role FROM Agent WHERE walletAddress = '0x...';</code></pre>
+    <li>Nếu <code>role = PROCESSOR</code>, hiển thị giao diện nhập dữ liệu rang xay.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2️⃣ Nhận và xử lý lô hàng (Processing)</h2>
+  <p><strong>Mục tiêu:</strong> Processor nhận lô hàng đã được Cooperative xác nhận và tiến hành xử lý.</p>
+  <ul>
+    <li>Processor xem thông tin lô hàng từ bảng <code>CoffeeLot</code>.</li>
+    <li>Nhập dữ liệu xử lý: phương pháp sơ chế, độ ẩm sau xử lý, khối lượng đầu ra.</li>
+    <li>Upload chứng từ xử lý lên IPFS → nhận <code>ipfsHash</code>.</li>
+    <li>Gọi hàm smart contract:</li>
+    <pre><code>updateStatus(lotId, LotStatus.Roasted, ipfsHash);</code></pre>
+    <li>Blockchain cập nhật trạng thái <code>Roasted</code> trong <code>SupplyChainLot</code>.</li>
+    <li>Offchain DB lưu <code>txHash</code>, <code>blockchainTimestamp</code> và <code>ipfsHash</code> vào bảng <code>LotSegment</code>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3️⃣ Cập nhật dữ liệu rang xay (Roasting Data)</h2>
+  <p><strong>Mục tiêu:</strong> Ghi nhận thông tin chi tiết về mẻ rang.</p>
+  <ul>
+    <li>Processor nhập dữ liệu rang: <code>roastProfile</code>, <code>roastBatchSize</code>, <code>cuppingScore</code>, <code>qualityGrade</code>.</li>
+    <li>Frontend gửi dữ liệu đến API → lưu vào bảng <code>LotSegment</code> và <code>LotTimeline</code>.</li>
+    <li>Offchain DB ghi nhận:</li>
+    <pre><code>INSERT INTO LotTimeline (lotId, status, timestamp, actorRole, txHash)
+VALUES (...);</code></pre>
+    <li>Liên kết <code>ipfsHash</code> với hồ sơ rang để truy xuất sau.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4️⃣ Đồng bộ dữ liệu Onchain ↔ Offchain</h2>
+  <p><strong>Mục tiêu:</strong> Đảm bảo dữ liệu rang xay hiển thị chính xác và khớp với blockchain.</p>
+  <ul>
+    <li>Frontend định kỳ gọi hàm <code>getLotData(lotId)</code> từ smart contract.</li>
+    <li>So sánh dữ liệu <code>currentStatus</code> và <code>roastingData</code> với bản ghi trong Offchain DB.</li>
+    <li>Nếu có thay đổi, cập nhật <code>LotTimeline</code> và <code>CoffeeLot</code> tương ứng.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5️⃣ Hiển thị truy xuất nguồn gốc</h2>
+  <p><strong>Mục tiêu:</strong> Cho phép Processor và các bên liên quan xem lịch sử xử lý và rang xay.</p>
+  <ul>
+    <li>Frontend truy vấn <code>LotTimeline</code> theo <code>lotId</code>.</li>
+    <li>Hiển thị chuỗi trạng thái: <code>Created → Harvested → Processed → Roasted → Exported → Received</code>.</li>
+    <li>Liên kết mỗi trạng thái với <code>txHash</code> và <code>ipfsHash</code> để xem hồ sơ rang và chứng từ.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>🔗 Tổng kết</h2>
+  <ul>
+    <li><strong>Onchain:</strong> Lưu trạng thái rang xay và mã IPFS hồ sơ rang.</li>
+    <li><strong>Offchain:</strong> Lưu dữ liệu chi tiết mẻ rang, điểm cupping và phân loại phẩm cấp.</li>
+    <li><strong>Processor:</strong> Là tác nhân chịu trách nhiệm chuyển đổi cà phê nhân sang cà phê rang, đảm bảo chất lượng trước khi xuất khẩu.</li>
+  </ul>
+</section>
+
+</body>
+</html>
