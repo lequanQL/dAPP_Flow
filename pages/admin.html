@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Flow tác nhân Admin – Coffee Robusta dApp</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #222; margin: 40px; }
+    h1, h2 { color: #4B2E05; }
+    h1 { border-bottom: 2px solid #C49A6C; padding-bottom: 8px; }
+    code, pre { background-color: #f4f4f4; padding: 4px 6px; border-radius: 4px; }
+    section { margin-bottom: 40px; }
+    ul { margin-left: 20px; }
+    .highlight { color: #C49A6C; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>🛠️ Coffee Robusta dApp – Flow cho tác nhân Admin</h1>
+
+<section>
+  <h2>🔧 Tổng quan</h2>
+  <p>Luồng hoạt động chi tiết của tác nhân <span class="highlight">Admin</span> trong hệ thống Coffee Robusta dApp. Admin chịu trách nhiệm quản lý người dùng, giám sát hoạt động on-chain/off-chain, và đảm bảo tính toàn vẹn dữ liệu trong toàn bộ chuỗi cung ứng cà phê.</p>
+  <ul>
+    <li><strong>Frontend (Presentation Layer):</strong> Giao diện quản trị, hiển thị dashboard và công cụ kiểm tra dữ liệu.</li>
+    <li><strong>Smart Contract (Blockchain):</strong> Cung cấp quyền kiểm tra, xác minh và khởi tạo các vai trò người dùng.</li>
+    <li><strong>Offchain DB:</strong> Lưu thông tin người dùng, nhật ký hoạt động và dữ liệu thống kê.</li>
+    <li><strong>IPFS:</strong> Lưu trữ báo cáo, chứng từ và tài liệu xác minh.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>1️⃣ Xác thực và đăng nhập</h2>
+  <p><strong>Mục tiêu:</strong> Đảm bảo Admin có quyền truy cập hợp lệ vào hệ thống.</p>
+  <ul>
+    <li>Admin mở dApp → Frontend hiển thị nút <strong>Connect Wallet</strong>.</li>
+    <li>Kết nối ví Metamask → gọi <code>window.ethereum.request({ method: 'eth_requestAccounts' })</code>.</li>
+    <li>Frontend kiểm tra vai trò trong bảng <code>Agent</code>:</li>
+    <pre><code>SELECT role FROM Agent WHERE walletAddress = '0x...';</code></pre>
+    <li>Nếu <code>role = ADMIN</code>, hiển thị dashboard quản trị.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2️⃣ Quản lý người dùng và vai trò</h2>
+  <p><strong>Mục tiêu:</strong> Admin thêm, sửa hoặc vô hiệu hóa tài khoản người dùng trong hệ thống.</p>
+  <ul>
+    <li>Admin nhập thông tin người dùng mới: tên, email, vai trò, địa chỉ ví.</li>
+    <li>Frontend gửi dữ liệu đến API → lưu vào bảng <code>Agent</code>.</li>
+    <pre><code>INSERT INTO Agent (walletAddress, name, role, email, phone)
+VALUES (...);</code></pre>
+    <li>Gọi hàm smart contract để đăng ký vai trò on-chain:</li>
+    <pre><code>registerRole(walletAddress, role);</code></pre>
+    <li>Blockchain ghi nhận quyền truy cập và liên kết với địa chỉ ví.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3️⃣ Giám sát hoạt động chuỗi cung ứng</h2>
+  <p><strong>Mục tiêu:</strong> Theo dõi và xác minh các giao dịch của Farmer, Cooperative, Processor, Exporter, và Roastery.</p>
+  <ul>
+    <li>Frontend hiển thị bảng <code>LotTimeline</code> và <code>LotSegment</code> theo thời gian thực.</li>
+    <li>Admin có thể truy vấn dữ liệu blockchain qua hàm:</li>
+    <pre><code>getLotData(lotId);</code></pre>
+    <li>So sánh dữ liệu on-chain với off-chain để phát hiện sai lệch.</li>
+    <li>Nếu phát hiện lỗi, Admin có thể tạo yêu cầu xác minh hoặc khóa lô hàng tạm thời.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4️⃣ Quản lý dữ liệu và báo cáo</h2>
+  <p><strong>Mục tiêu:</strong> Tổng hợp dữ liệu truy xuất nguồn gốc và tạo báo cáo minh bạch.</p>
+  <ul>
+    <li>Frontend cho phép xuất báo cáo theo lô hàng, tác nhân hoặc thời gian.</li>
+    <li>Dữ liệu được lấy từ bảng <code>CoffeeLot</code> và <code>LotTimeline</code>.</li>
+    <li>Upload báo cáo lên IPFS → nhận <code>ipfsHash</code>.</li>
+    <li>Gọi hàm smart contract để lưu mã băm báo cáo:</li>
+    <pre><code>storeReportHash(ipfsHash);</code></pre>
+    <li>Blockchain lưu chứng từ xác minh minh bạch.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5️⃣ Hiển thị truy xuất tổng thể</h2>
+  <p><strong>Mục tiêu:</strong> Cho phép Admin xem toàn bộ chuỗi cung ứng và trạng thái từng lô hàng.</p>
+  <ul>
+    <li>Frontend hiển thị chuỗi trạng thái: <code>Created → Harvested → Processed → Roasted → Exported → Received</code>.</li>
+    <li>Admin có thể xem chi tiết từng bước, chứng từ IPFS và <code>txHash</code>.</li>
+    <li>Cho phép tải xuống hoặc chia sẻ báo cáo minh bạch cho đối tác.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>🔗 Tổng kết</h2>
+  <ul>
+    <li><strong>Onchain:</strong> Lưu quyền truy cập, vai trò và chứng từ xác minh.</li>
+    <li><strong>Offchain:</strong> Lưu thông tin người dùng, nhật ký hoạt động và dữ liệu thống kê.</li>
+    <li><strong>Admin:</strong> Là tác nhân giám sát và đảm bảo tính minh bạch, toàn vẹn dữ liệu trong toàn bộ hệ thống Coffee Robusta dApp.</li>
+  </ul>
+</section>
+
+</body>
+</html>
