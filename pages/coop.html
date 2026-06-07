@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Flow tác nhân Cooperative – Coffee Robusta dApp</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #222; margin: 40px; }
+    h1, h2 { color: #4B2E05; }
+    h1 { border-bottom: 2px solid #C49A6C; padding-bottom: 8px; }
+    code, pre { background-color: #f4f4f4; padding: 4px 6px; border-radius: 4px; }
+    section { margin-bottom: 40px; }
+    ul { margin-left: 20px; }
+    .highlight { color: #C49A6C; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>🏢 Coffee Robusta dApp – Flow cho tác nhân Cooperative</h1>
+
+<section>
+  <h2>🔧 Tổng quan</h2>
+  <p>Luồng hoạt động chi tiết của tác nhân <span class="highlight">Cooperative</span> trong hệ thống Coffee Robusta dApp, từ bước xác nhận lô hàng đến đồng bộ dữ liệu. Cooperative là cầu nối giữa Farmer và Processor, chịu trách nhiệm kiểm định và xác nhận chất lượng lô hàng.</p>
+  <ul>
+    <li><strong>Frontend (Presentation Layer):</strong> Giao diện xác nhận và nhập dữ liệu kiểm định.</li>
+    <li><strong>Smart Contract (Blockchain):</strong> Cập nhật trạng thái lô hàng và lưu mã IPFS chứng nhận.</li>
+    <li><strong>Offchain DB:</strong> Lưu báo cáo kiểm định, metadata và lịch sử xác nhận.</li>
+    <li><strong>IPFS:</strong> Lưu trữ chứng từ kiểm định và hình ảnh mẫu cà phê.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>1️⃣ Xác nhận quyền truy cập</h2>
+  <p><strong>Mục tiêu:</strong> Đảm bảo Cooperative là người có quyền xác nhận lô hàng.</p>
+  <ul>
+    <li>Cooperative mở dApp → Frontend hiển thị nút <strong>Connect Wallet</strong>.</li>
+    <li>Kết nối ví Metamask → gọi <code>window.ethereum.request({ method: 'eth_requestAccounts' })</code>.</li>
+    <li>Frontend kiểm tra vai trò trong bảng <code>Agent</code>:</li>
+    <pre><code>SELECT role FROM Agent WHERE walletAddress = '0x...';</code></pre>
+    <li>Nếu <code>role = COOPERATIVE</code>, hiển thị giao diện xác nhận lô hàng.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2️⃣ Kiểm định và xác nhận lô hàng (Harvest Verification)</h2>
+  <p><strong>Mục tiêu:</strong> Cooperative xác nhận dữ liệu thu hoạch do Farmer gửi.</p>
+  <ul>
+    <li>Cooperative xem thông tin lô hàng từ bảng <code>CoffeeLot</code>.</li>
+    <li>Nhập dữ liệu kiểm định: độ ẩm, chất lượng, khối lượng thực tế, ghi chú.</li>
+    <li>Upload chứng từ kiểm định lên IPFS → nhận <code>ipfsHash</code>.</li>
+    <li>Gọi hàm smart contract:</li>
+    <pre><code>updateStatus(lotId, LotStatus.Processed, ipfsHash);</code></pre>
+    <li>Blockchain cập nhật trạng thái <code>Processed</code> trong <code>SupplyChainLot</code>.</li>
+    <li>Offchain DB lưu <code>txHash</code>, <code>blockchainTimestamp</code> và <code>ipfsHash</code> vào bảng <code>LotSegment</code>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3️⃣ Cập nhật dữ liệu Offchain</h2>
+  <p><strong>Mục tiêu:</strong> Lưu dữ liệu kiểm định và đồng bộ với blockchain.</p>
+  <ul>
+    <li>Frontend gửi dữ liệu kiểm định đến API → lưu vào bảng <code>LotSegment</code> và <code>LotTimeline</code>.</li>
+    <li>Offchain DB ghi nhận:</li>
+    <pre><code>INSERT INTO LotTimeline (lotId, status, timestamp, actorRole, txHash)
+VALUES (...);</code></pre>
+    <li>Liên kết <code>ipfsHash</code> với chứng từ kiểm định để truy xuất sau.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4️⃣ Đồng bộ dữ liệu Onchain ↔ Offchain</h2>
+  <p><strong>Mục tiêu:</strong> Đảm bảo dữ liệu kiểm định hiển thị chính xác và khớp với blockchain.</p>
+  <ul>
+    <li>Frontend định kỳ gọi hàm <code>getLotData(lotId)</code> từ smart contract.</li>
+    <li>So sánh dữ liệu <code>currentStatus</code> và <code>ipfsHash</code> với bản ghi trong Offchain DB.</li>
+    <li>Nếu có thay đổi, cập nhật <code>LotTimeline</code> và <code>LotSegment</code> tương ứng.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5️⃣ Hiển thị truy xuất nguồn gốc</h2>
+  <p><strong>Mục tiêu:</strong> Cho phép Cooperative và các bên liên quan xem lịch sử xác nhận lô hàng.</p>
+  <ul>
+    <li>Frontend truy vấn <code>LotTimeline</code> theo <code>lotId</code>.</li>
+    <li>Hiển thị chuỗi trạng thái: <code>Created → Harvested → Processed → Exported → Received</code>.</li>
+    <li>Liên kết mỗi trạng thái với <code>txHash</code> và <code>ipfsHash</code> để xem chứng từ kiểm định.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>🔗 Tổng kết</h2>
+  <ul>
+    <li><strong>Onchain:</strong> Lưu trạng thái xác nhận và mã IPFS chứng nhận.</li>
+    <li><strong>Offchain:</strong> Lưu báo cáo kiểm định, metadata và lịch sử xác nhận.</li>
+    <li><strong>Cooperative:</strong> Là tác nhân trung gian đảm bảo chất lượng và minh bạch giữa Farmer và Processor.</li>
+  </ul>
+</section>
+
+</body>
+</html>
