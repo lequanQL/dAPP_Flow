@@ -1,0 +1,191 @@
+﻿-DAPP TRUY XUẤT NGUỒN GỐC CÀ PHÊ ROBUSTA ĐẮK LẮK
+1. Ý tưởng cốt lõi
+Ý tưởng cốt lõi của dự án là xây dựng một nền tảng truy xuất nguồn gốc thế hệ mới cho chuỗi cung ứng cà phê, nơi tính minh bạch và độ tin cậy không còn phụ thuộc vào giấy tờ hay trung gian, mà được đảm bảo bởi cơ chế vận hành tự động của blockchain. Hệ thống hướng đến việc giải quyết các vấn đề về gian lận thông tin, thiếu minh bạch và khó xác thực trong thương mại nông sản thông qua bốn trụ cột chính:
+1.1. Quản trị “Trustless” dựa trên Smart Contract
+Thay vì phụ thuộc vào sự xác nhận của từng bên trong chuỗi cung ứng, toàn bộ quy trình xử lý lô cà phê được mã hóa thành các quy tắc cố định trong smart contract. Các điều kiện chuyển trạng thái, quyền cập nhật dữ liệu và trình tự xử lý được thực thi tự động, đảm bảo rằng không một bên nào có thể tự ý thay đổi hoặc bỏ qua quy trình đã định.
+1.2. Hồ sơ lô hàng bất biến trên Blockchain
+Mỗi lô cà phê được xem như một thực thể số duy nhất, với toàn bộ lịch sử được ghi nhận trên blockchain:
+* Tính bất biến: Dữ liệu sau khi ghi nhận không thể bị chỉnh sửa hoặc xóa bỏ.
+* Tính minh bạch: Mọi bên liên quan đều có thể truy cập và kiểm chứng lịch sử của lô hàng theo thời gian thực.
+1.3. Truy xuất nguồn gốc xuyên suốt chuỗi giá trị
+Hệ thống cho phép theo dõi toàn bộ hành trình của lô cà phê từ nông trại đến đối tác quốc tế, bao gồm các giai đoạn: thu hoạch, sơ chế, rang xay và xuất khẩu. Mỗi giai đoạn đều được ghi nhận với thông tin chi tiết và tác nhân chịu trách nhiệm, tạo thành một chuỗi dữ liệu liên tục và có thể kiểm chứng.
+1.4. Xác thực danh tính và trách nhiệm thông qua ví điện tử
+Mỗi tác nhân trong hệ thống được định danh bằng ví điện tử và thực hiện các hành động thông qua chữ ký số. Chỉ những địa chỉ đã được cấp quyền mới có thể tham gia cập nhật dữ liệu, đảm bảo tính chính danh và trách nhiệm rõ ràng trong từng bước xử lý.
+2. Các tính năng chính (Mô tả chi tiết)
+Hệ thống được thiết kế theo mô hình phân quyền chặt chẽ, trong đó mỗi chức năng không chỉ mô tả hành động mà còn bao gồm điều kiện thực thi, dữ liệu xử lý và kết quả hệ thống.
+A. Nhóm tính năng Quản trị (Admin)
+1. Quản lý vai trò và quyền truy cập
+Mô tả:
+Cho phép quản trị viên cấp phát và thu hồi quyền cho các địa chỉ ví tương ứng với từng vai trò trong chuỗi cung ứng.
+Hành vi hệ thống:
+* Xác thực người thực hiện là quản trị viên hợp lệ
+* Gán vai trò cụ thể cho địa chỉ ví (Farmer, Cooperative, Processor, Exporter, Roastery)
+* Ngăn chặn việc một địa chỉ thực hiện hành động ngoài phạm vi quyền hạn
+Kết quả:
+* Danh sách vai trò được cập nhật
+* Ghi nhận lịch sử thay đổi để phục vụ kiểm toán
+2. Giám sát hoạt động hệ thống
+Mô tả:
+Cung cấp khả năng theo dõi toàn bộ hoạt động của các tác nhân.
+Hành vi hệ thống:
+* Ghi nhận mọi giao dịch liên quan đến lô cà phê
+* Lưu lại thông tin: người thực hiện, thời điểm, loại hành động
+Kết quả:
+* Tạo thành nhật ký hoạt động (audit log) không thể chỉnh sửa
+* Hỗ trợ truy vết khi xảy ra tranh chấp
+3. Kiểm soát quy trình xử lý lô hàng
+Mô tả:
+Đảm bảo mỗi lô cà phê tuân thủ đúng vòng đời đã định.
+Hành vi hệ thống:
+* Kiểm tra trạng thái hiện tại của lô trước khi cho phép cập nhật
+* Từ chối các hành động không đúng thứ tự hoặc sai vai trò
+Kết quả:
+* Duy trì tính nhất quán của toàn bộ chuỗi dữ liệu
+B. Nhóm tính năng Tác nhân chuỗi cung ứng
+1. Nông dân (Farmer)
+1.1. Tạo lô cà phê
+Mô tả:
+Khởi tạo một lô cà phê mới với thông tin ban đầu.
+Dữ liệu đầu vào:
+* Vị trí vùng trồng (tọa độ)
+* Độ cao
+* Giống cây
+* Thông tin canh tác
+* Tài liệu/hình ảnh minh chứng
+Hành vi hệ thống:
+* Kiểm tra quyền của người tạo
+* Tạo mã định danh duy nhất cho lô
+* Lưu trữ dữ liệu và liên kết với tài liệu đính kèm
+Kết quả:
+* Lô cà phê được tạo với trạng thái ban đầu
+* Có thể được truy xuất công khai
+1.2. Cập nhật thông tin thu hoạch
+Mô tả:
+Bổ sung dữ liệu khi quá trình thu hoạch hoàn tất.
+Dữ liệu đầu vào:
+* Ngày thu hoạch
+* Phương pháp thu hoạch
+Hành vi hệ thống:
+* Xác minh lô thuộc quyền sở hữu của nông dân
+* Kiểm tra trạng thái hợp lệ
+* Ghi nhận dữ liệu mới
+Kết quả:
+* Trạng thái lô được cập nhật sang giai đoạn tiếp theo
+* Tạo bản ghi lịch sử
+2. Hợp tác xã (Cooperative)
+2.1. Xác nhận sơ chế
+Mô tả:
+Xác nhận việc xử lý sau thu hoạch và bổ sung dữ liệu kỹ thuật.
+Dữ liệu đầu vào:
+* Phương pháp sơ chế
+* Thời gian lên men
+* Độ ẩm
+* Tỷ lệ tạp chất
+Hành vi hệ thống:
+* Kiểm tra quyền truy cập
+* Xác minh trạng thái lô phù hợp
+* Ghi nhận dữ liệu và liên kết tài liệu
+Kết quả:
+* Lô chuyển sang trạng thái đã sơ chế
+* Dữ liệu phục vụ đánh giá chất lượng được lưu trữ
+2.2. Từ chối lô hàng
+Mô tả:
+Đánh dấu lô không đạt tiêu chuẩn.
+Hành vi hệ thống:
+* Ghi nhận lý do từ chối
+* Cập nhật trạng thái lô thành kết thúc
+Kết quả:
+* Ngăn chặn mọi cập nhật tiếp theo
+* Lưu lại thông tin phục vụ truy vết
+3. Nhà chế biến (Processor)
+3.1. Cập nhật thông tin rang
+Mô tả:
+Ghi nhận quy trình rang và các thông số kỹ thuật.
+Dữ liệu đầu vào:
+* Hồ sơ rang (nhiệt độ, thời gian)
+* Quy mô mẻ rang
+Hành vi hệ thống:
+* Xác thực vai trò
+* Kiểm tra trạng thái lô
+* Lưu dữ liệu và tạo bản ghi mới
+3.2. Đánh giá và phân loại
+Mô tả:
+Đánh giá chất lượng sản phẩm sau rang.
+Dữ liệu đầu vào:
+* Điểm cảm quan
+* Phân loại chất lượng
+Hành vi hệ thống:
+* Ghi nhận kết quả đánh giá
+* Xác định phân loại tương ứng
+Kết quả:
+* Lô cà phê được gán mức chất lượng
+* Là cơ sở cho định giá và giao dịch
+4. Đơn vị xuất khẩu (Exporter)
+4.1. Hoàn tất và xuất lô
+Mô tả:
+Chuẩn bị và xác nhận lô cà phê cho việc xuất khẩu.
+Dữ liệu đầu vào:
+* Thông tin vận chuyển
+* Chứng nhận
+* Mã container
+Hành vi hệ thống:
+* Kiểm tra tính đầy đủ của dữ liệu
+* Ghi nhận thông tin xuất khẩu
+4.2. Tạo mã truy xuất
+Mô tả:
+Tạo mã định danh phục vụ tra cứu.
+Hành vi hệ thống:
+* Sinh mã liên kết đến dữ liệu lô
+* Gắn mã với lô hàng
+Kết quả:
+* Người dùng có thể truy cập thông tin bằng mã này
+5. Đối tác nhận hàng (Roastery)
+5.1. Tra cứu và xác minh
+Mô tả:
+Kiểm tra toàn bộ lịch sử lô cà phê.
+Hành vi hệ thống:
+* Truy xuất dữ liệu theo mã lô
+* Hiển thị toàn bộ các giai đoạn xử lý
+5.2. Xác nhận tiếp nhận
+Mô tả:
+Xác nhận đã nhận hàng.
+Hành vi hệ thống:
+* Kiểm tra trạng thái hiện tại
+* Ghi nhận hành động xác nhận
+Kết quả:
+* Hoàn tất vòng đời lô cà phê
+C. Nhóm tính năng Công khai (Public)
+1. Tra cứu lô cà phê
+Mô tả:
+Cho phép bất kỳ người dùng nào tìm kiếm thông tin lô hàng.
+Hành vi hệ thống:
+* Nhận đầu vào là mã lô hoặc mã truy xuất
+* Truy vấn dữ liệu và hiển thị
+2. Hiển thị dòng thời gian
+Mô tả:
+Trình bày lịch sử xử lý theo thứ tự thời gian.
+Nội dung hiển thị:
+* Giai đoạn xử lý
+* Tác nhân thực hiện
+* Thời điểm
+* Tài liệu liên quan
+3. Truy cập tài liệu
+Mô tả:
+Cho phép xem và tải các tài liệu đính kèm.
+Hành vi hệ thống:
+* Liên kết tài liệu với từng giai đoạn
+* Đảm bảo dữ liệu không bị thay đổi
+4. Bảng điều khiển tổng quan
+Mô tả:
+Cung cấp cái nhìn tổng thể về hệ thống.
+Chức năng:
+* Thống kê số lượng lô theo trạng thái
+* Hiển thị hoạt động gần đây
+* Hỗ trợ theo dõi tình trạng chuỗi cung ứng
+
+
+3. Tổng kết chức năng
+Toàn bộ hệ thống vận hành dựa trên ba nguyên tắc chính:
+* Mỗi hành động đều được xác thực và ghi nhận
+* Mỗi dữ liệu đều có thể truy vết và kiểm chứng
+* Mỗi lô cà phê đều có một lịch sử minh bạch, không thể thay đổi

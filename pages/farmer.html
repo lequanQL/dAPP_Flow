@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi">
-</head>
-<body>
-
-<div id="site-header"></div>
-<script src="header.js"></script>
-
-<h1>👩‍🌾 Coffee Robusta dApp – Flow cho tác nhân Farmer</h1>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #222; margin: 40px; }
+<head>
+  <meta charset="UTF-8">
+  <title>Flow tác nhân Farmer – Coffee Robusta dApp</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #222; }
     h1, h2 { color: #4B2E05; }
     h1 { border-bottom: 2px solid #C49A6C; padding-bottom: 8px; }
     code, pre { background-color: #f4f4f4; padding: 4px 6px; border-radius: 4px; }
@@ -17,6 +14,11 @@
   </style>
 </head>
 <body>
+
+<div id="site-header"></div>
+<script src="header.js"></script>
+
+<main class="page">
 
 <h1>☕ Coffee Robusta dApp – Flow cho tác nhân Farmer</h1>
 
@@ -89,7 +91,7 @@ VALUES (...);</code></pre>
   <p><strong>Mục tiêu:</strong> Cho phép Farmer và các bên khác xem toàn bộ lịch sử lô hàng.</p>
   <ul>
     <li>Frontend truy vấn <code>LotTimeline</code> theo <code>lotId</code>.</li>
-    <li>Hiển thị chuỗi trạng thái: <code>Created → Harvested → Processed → Exported → Received</code>.</li>
+    <li>Hiển thị chuỗi trạng thái: <code>Created → Harvested → Processed → Roasted → Exported → Received</code>.</li>
     <li>Mỗi trạng thái liên kết với <code>txHash</code> và <code>ipfsHash</code> để xem chi tiết chứng từ.</li>
   </ul>
 </section>
@@ -102,6 +104,8 @@ VALUES (...);</code></pre>
     <li><strong>Farmer:</strong> Là tác nhân khởi đầu chuỗi, tạo dữ liệu nền tảng cho toàn bộ hệ thống truy xuất.</li>
   </ul>
 </section>
+
+</main>
 
 </body>
 </html>

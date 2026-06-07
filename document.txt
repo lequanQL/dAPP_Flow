@@ -1,0 +1,2855 @@
+﻿Outline
+CHƯƠNG 1: MỞ ĐẦU / ĐẶT VẤN ĐỀ KHUYẾN
+:xem tại đây 
+* 1.1. Lý do chọn đề tài: Thực trạng minh bạch hóa nguồn gốc nông sản (đặc biệt là cà phê chất lượng cao); các hạn chế của hệ thống quản lý cơ sở dữ liệu tập trung truyền thống (dễ bị sửa đổi, thiếu tin cậy).
+* 1.2. Mục tiêu dự án: Xây dựng hệ thống quản lý vòng đời hạt cà phê ứng dụng công nghệ Blockchain và IPFS nhằm đảm bảo tính toàn vẹn dữ liệu từ nông trường đến người tiêu dùng.
+* 1.3. Phạm vi nghiên cứu: Luồng cung ứng khép kín gồm 5 phân đoạn (Nông dân, Hợp tác xã, Nhà máy rang, Nhà xuất khẩu, Nhà bán lẻ quốc tế) chạy trên mạng Testnet.
+* 1.4. Đối tượng sử dụng: Các tác nhân trong chuỗi (Agents) và Người tiêu dùng đại chúng (Public Users).
+CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ ÁP DỤNG NHI
+* 2.1. Tổng quan về Công nghệ Blockchain & Smart Contract: Định nghĩa, đặc tính (bất biến, phi tập trung), vai trò của Solidity trong việc quản lý tài sản mã hóa (Asset tracking).
+* 2.2. Cơ chế phân quyền Access Control (RBAC): Cách thức quản lý các vai trò (FARMER_ROLE, COOPERATIVE_ROLE, v.v.) bằng địa chỉ ví công khai.
+* 2.3. Lưu trữ phi tập trung với IPFS: Giải pháp lưu trữ chứng chỉ, hình ảnh mẻ thu hoạch bằng chuỗi băm CID nhằm tối ưu chi phí lưu trữ on-chain.
+* 2.4. Kiến trúc Event-Driven & Công nghệ Indexing: Nguyên lý đồng bộ dữ liệu thời gian thực từ mạng Blockchain về cơ sở dữ liệu quan hệ (Postgres) thông qua Ethers.js và Prisma.
+CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG (MÔ HÌNH NGHIỆP VỤ)
+https://docs.google.com/document/d/1fF5myekpJFCv-pKCJbgQ9IZhIUZVIkyishSIcH7fdZg/edit?tab=t.eyx8736fr44
+https://docs.google.com/document/d/1fF5myekpJFCv-pKCJbgQ9IZhIUZVIkyishSIcH7fdZg/edit?tab=t.cavgj6z35min#heading=h.jdnozcmmlns1
+
+
+* 3.1. Mô tả luồng nghiệp vụ cốt lõi (Business Workflow): Chi tiết hành trình hạt cà phê qua 5 trạng thái. PHƯƠNG
+* 3.2. Sơ đồ quy trình nghiệp vụ BPMN đơn giản: Trực quan hóa sự phối hợp phân tầng công việc giữa các thành viên. PHƯƠNG
+* 3.3. Biểu đồ UseCase: Phân chia tính năng cho hai nhóm: Nhóm cần quyền xác thực (Agents điều khiển chuỗi) và nhóm công khai (Khách hàng quét QR Code tra cứu công khai). HUY
+* 3.4. Mô hình cấu trúc dữ liệu dữ liệu (Database Schema): Thiết kế bảng CoffeeLot, LotStageDetail (Cột JSONB lưu trữ thông số động) và bảng cấu hình SystemConfig. HUY
+CHƯƠNG 4: THIẾT KẾ VÀ KIẾN TRÚC MÃ NGUỒN (TECHNICAL IMPLEMENTATION)
+* 4.1. Thiết kế Smart Contract (Solidity):
+   * Cấu trúc Struct tài sản (SupplyChainLot, FarmData, ProcessingData, RoastingData).
+   * Logic kiểm soát trạng thái, các ràng buộc require nghiêm ngặt và cơ chế đóng băng lô hàng bị hủy.
+   * Hàm view getCoffeeLot tối ưu không tốn gas phục vụ bên thứ ba.
+* 4.2. Xây dựng Hệ thống Backend & API Node.js (Prisma):
+   * Tích hợp SDK Pinata xử lý Stream file lên IPFS.
+   * API phân quyền Workspace dựa trên JWT giải mã địa chỉ ví.
+   * Kỹ thuật LEFT JOIN / include tối ưu hóa câu lệnh SQL trả về đồ thị lịch sử dưới 50ms.
+* 4.3. Phát triển Công cụ Indexer & Mô-đun Cứu hộ (Worker & Resiliency):
+   * Logic lắng nghe đồng thời các sự kiện (LotCreated, LotStatusUpdated, LotExported).
+   * Thiết kế thuật toán Cronjob sửa lỗi tự động, tự quét bù block thiếu hụt bằng queryFilter khi RPC mất kết nối đột ngột.
+* 4.4. Giao diện Người dùng (Frontend Integration): Kết nối giao diện Web với Smart Contract bằng Ethers.js/Web3.js (Ký giao dịch qua Metamask, gọi hàm read/write on-chain).
+CHƯƠNG 5: QUY TRÌNH DEVOPS, DEPLOYMENT VÀ KIỂM THỬ (TESTING)
+* 5.1. Cấu hình và Deploy Smart Contract: * File cấu hình hardhat.config.js (Bật tính năng Optimizer với runs: 200 để giảm dung lượng file bytecode).
+   * Nhật ký deploy thực tế lên mạng Testnet (Ví dụ: Sepolia hoặc BSC Testnet) kèm địa chỉ Contract và lượng Gas tiêu thụ cho từng hàm cập nhật trạng thái.
+* 5.2. Kịch bản kiểm thử (Testing Phase):
+   * Unit Test độc lập cho từng tính năng của mỗi thành viên (Nông dân, HTX, Nhà máy, API, Cronjob).
+   * Integration Test: Chạy thực tế một chuỗi cung ứng hoàn chỉnh từ hạt thô đầu vào đến mã QR thành phẩm cuối cùng.
+CHƯƠNG 6: ĐÁNH GIÁ, BẢO MẬT VÀ ĐỊNH HƯỚNG TƯƠNG LAI
+* 6.1. Phân tích bảo mật Hệ thống:
+   * Đánh giá lỗ hổng bảo mật tiềm ẩn (Reentrancy, Access Control bypass, Oracle manipulation).
+   * Biện pháp phòng vệ (Sử dụng thư viện OpenZeppelin, kiểm tra đầu vào nghiêm ngặt).
+* 6.2. Các hạn chế hiện tại của dự án (Limitations): Vấn đề rủi ro dữ liệu đầu vào (Garbage In, Garbage Out) - làm sao chứng minh nông dân nhập đúng tọa độ GPS; chi phí Gas phát sinh khi mạng chính thức (Mainnet) bị nghẽn.
+* 6.3. Định hướng phát triển tương lai (Future Work): Tích hợp cảm biến IoT (Internet of Things) để tự động cập nhật nhiệt độ, độ ẩm lên Blockchain không cần con người can thiệp; chuyển dịch sang các mạng Layer 2 (Arbitrum, Optimism) để giảm chi phí giao dịch.
+KẾT LUẬN
+* Tổng kết các kết quả đạt được của dự án đối với việc số hóa chuỗi cung ứng.
+* Bài học kinh nghiệm về quản lý nhóm theo mô hình Full-Stack Feature Owner và quản lý mã nguồn Git Branch.
+
+
+Data Dictionary
+TẤT CẢ CÁC LUỒNG TƯƠNG TÁC VÀ ĐẶC TẢ LƯU TRỮ TRƯỜNG DỮ LIỆU
+🛠️ Luồng Khởi tạo: Đăng ký Tài khoản (Agent Registration)
+* Tác nhân: ADMIN (Ban quản trị hệ thống).
+* Bản chất: Luồng này chạy hoàn toàn Off-chain để lưu hồ sơ người dùng (Hoặc có thể kết hợp phân quyền On-chain bằng bộ danh sách White-list tùy thiết kế Smart Contract của nhóm).
+* Dữ liệu lưu trữ:
+   * Off-chain (Bảng Agent): Lưu walletAddress (Khóa chính), name (Tên thật), role (Vai trò), phone, email, physicalAddress, isActive (Trạng thái kích hoạt).
+🌾 Luồng 1: Nông dân khởi tạo Lô hàng (Create Coffee Lot)
+* Tác nhân: FARMER (Người nông dân).
+* Mô tả: Nông dân khai báo giống cà phê và thông tin vùng trồng lên hệ thống để bắt đầu một vòng đời mới.
+Nơi lưu trữ
+	Các trường dữ liệu được lưu (Fields)
+	Định dạng & Quy tắc
+	On-chain
+
+
+(Struct SupplyChainLot & FarmData)
+	id
+
+
+qrCodeIdentifier
+
+
+status
+
+
+currentActor & farmerAddress
+
+
+farmDetails.gpsCoordinates
+
+
+farmDetails.elevation
+
+
+farmDetails.coffeeVariety
+
+
+farmDetails.cultivationMethod
+	uint256 (Counter tự tăng)
+
+
+string (Mã định danh QR)
+
+
+enum (Lưu số 0 - Created)
+
+
+address (Ví của nông dân)
+
+
+string (Tọa độ văn bản)
+
+
+uint256 (Số nguyên mét)
+
+
+string (Tên giống)
+
+
+string (Cách canh tác)
+	Off-chain
+
+
+(Bảng CoffeeLot & LotStageDetail)
+	Bảng CoffeeLot:
+
+
+- lotId
+
+
+- qrCode
+
+
+- currentStatus
+
+
+- currentActor & farmerAddress
+
+
+- initTxHash
+
+
+- createdAt
+
+
+Bảng LotStageDetail:
+
+
+- stageName
+
+
+- stageDataPayload (JSONB)
+	
+
+BigInt (Bằng id on-chain)
+
+
+String (Bằng qrCodeIdentifier)
+
+
+String (Lưu chữ "CREATED")
+
+
+String (Địa chỉ ví dạng chữ)
+
+
+String (Mã băm giao dịch lúc tạo)
+
+
+DateTime (Thời gian sinh block)
+
+
+
+
+String (Lưu chữ "FARM")
+
+
+Object (Chứa: gpsCoordinates, elevation, coffeeVariety, cultivationMethod giống y trên chain)
+	🍒 Luồng 2: Nông dân khai báo Thu hoạch (Harvest Log)
+* Tác nhân: FARMER (Người nông dân).
+* Mô tả: Khi cà phê chín, nông dân thu hoạch và điền ngày tháng, phương pháp hái. Luồng này sẽ cập nhật trạng thái lô hàng.
+Nơi lưu trữ
+	Các trường dữ liệu được lưu (Fields)
+	Định dạng & Quy tắc
+	On-chain
+
+
+(Struct HarvestData)
+	status
+
+
+harvestDetails.harvestDate
+
+
+harvestDetails.harvestMethod
+	enum (Cập nhật thành số 1 - Harvested)
+
+
+uint256 (Đổi ngày ra Unix Timestamp giây)
+
+
+string (Ví dụ: "Hái tay chín 95%")
+	Off-chain
+
+
+(Ghi đè & Chèn mới)
+	Bảng CoffeeLot:
+
+
+- currentStatus
+
+
+Bảng LotStageDetail (Tạo dòng mới):
+
+
+- stageName
+
+
+- stageDataPayload (JSONB)
+
+
+- txHash & blockchainTimestamp
+
+
+Bảng LotTimeline (Tạo dòng mới):
+
+
+- status
+
+
+- description
+	
+
+Cập nhật thành chuỗi "HARVESTED"
+
+
+
+
+Lưu chữ "HARVEST"
+
+
+Object (Chứa: harvestDate, harvestMethod)
+
+
+Lưu mã giao dịch và thời gian block
+
+
+
+
+Lưu chuỗi "HARVESTED"
+
+
+Chuỗi text: "Nông hộ đã hoàn thành thu hoạch..."
+	🧪 Luồng 3: Hợp tác xã Sơ chế & Kiểm định (Processing)
+* Tác nhân: COOPERATIVE (Hợp tác xã).
+* Mô tả: Nông dân giao hàng cho HTX. HTX tiến hành bóc vỏ, lên men, phơi khô, đo độ ẩm hạt rồi cập nhật lên hệ thống. Nếu không đạt chất lượng, HTX có quyền chuyển sang trạng thái Rejected.
+Nơi lưu trữ
+	Các trường dữ liệu được lưu (Fields)
+	Định dạng & Quy tắc [CRITICAL MAPPING]
+	On-chain
+
+
+(Struct ProcessingData)
+	status
+
+
+currentActor
+
+
+processingDetails.processMethod
+
+
+processingDetails.fermentationTime
+
+
+processingDetails.moistureContent
+
+
+processingDetails.impurityRate
+	enum (Cập nhật thành số 2 - Processed hoặc 3 - Rejected)
+
+
+address (Chuyển quyền sở hữu sang ví HTX)
+
+
+string (Ví dụ: "Honey Process")
+
+
+uint256 (Số tiếng lên men)
+
+
+uint256 (Nhân 10: 12.5% $\rightarrow$ lưu 125)
+
+
+uint256 (Nhân 100: 0.20% $\rightarrow$ lưu 20)
+	Off-chain
+
+
+(Giải nén & Đồng bộ)
+	Bảng CoffeeLot:
+
+
+- currentStatus & currentActor
+
+
+Bảng LotStageDetail (Tạo dòng mới):
+
+
+- stageName
+
+
+- stageDataPayload (JSONB)
+
+
+
+
+
+
+- txHash & blockchainTimestamp
+
+
+Bảng LotTimeline (Tạo dòng mới):
+
+
+- description
+	
+
+Cập nhật thành "PROCESSED" và ví của HTX
+
+
+
+
+Lưu chữ "PROCESSING"
+
+
+Object (Giải nén thành số thực Float):
+
+
+{
+
+
+"processMethod": "Honey Process",
+
+
+"moistureContent": 12.5, // Đã chia 10
+
+
+"impurityRate": 0.2 // Đã chia 100
+
+
+}
+
+
+Lưu mã băm và thời gian block nhận việc
+
+
+
+
+Text: "Hợp tác xã đã xác nhận sơ chế. Độ ẩm: 12.5%"
+	🔥 Luồng 4: Nhà máy tiến hành Rang xay (Roasting)
+* Tác nhân: PROCESSOR (Nhà máy rang / Nghệ nhân rang).
+* Mô tả: Lô hạt khô được chuyển đến nhà máy. Tại đây họ rang, thử nếm kiểm tra phẩm cấp (Cupping), chấm điểm theo tiêu chuẩn SCA.
+Nơi lưu trữ
+	Các trường dữ liệu được lưu (Fields)
+	Định dạng & Quy tắc [CRITICAL MAPPING]
+	On-chain
+
+
+(Struct RoastingData)
+	status
+
+
+currentActor
+
+
+roastingDetails.roastProfile
+
+
+roastingDetails.roastBatchSize
+
+
+roastingDetails.cuppingScore
+
+
+roastingDetails.qualityGrade
+	enum (Cập nhật thành số 4 - Roasted)
+
+
+address (Chuyển quyền sang ví nhà máy rang)
+
+
+string (Ví dụ: "Medium Roast")
+
+
+uint256 (Khối lượng mẻ rang kg)
+
+
+uint256 (Nhân 100: 84.50 điểm $\rightarrow$ lưu 8450)
+
+
+string (Ví dụ: "Fine Robusta")
+	Off-chain
+
+
+(Giải nén & Đồng bộ)
+	Bảng CoffeeLot:
+
+
+- currentStatus & currentActor
+
+
+Bảng LotStageDetail (Tạo dòng mới):
+
+
+- stageName
+
+
+- stageDataPayload (JSONB)
+
+
+
+
+
+
+- txHash & blockchainTimestamp
+
+
+Bảng LotTimeline (Tạo dòng mới):
+
+
+- description
+	
+
+Cập nhật thành "ROASTED" và ví nhà máy
+
+
+
+
+Lưu chữ "ROASTING"
+
+
+Object (Giải nén thành số thực Float):
+
+
+{
+
+
+"roastProfile": "Medium Roast",
+
+
+"cuppingScore": 84.5, // Đã chia 100
+
+
+"qualityGrade": "Fine Robusta"
+
+
+}
+
+
+Lưu mã băm và thời gian block nhận việc
+
+
+
+
+Text: "Nhà máy hoàn thành mẻ rang. Điểm thử nếm: 84.5"
+	🚢 Luồng 5: Xuất khẩu và Thông quan (Exportation)
+* Tác nhân: EXPORTER (Đơn vị ủy thác xuất khẩu).
+* Mô tả: Đóng gói cà phê vào thành phẩm, dán nhãn mã QR Code bọc quanh pallet, đưa vào container ra cảng làm thủ tục thông quan quốc tế.
+Nơi lưu trữ
+	Các trường dữ liệu được lưu (Fields)
+	Định dạng & Quy tắc
+	On-chain
+
+
+(Struct ExportData)
+	status
+
+
+currentActor
+
+
+exportDetails.containerId
+
+
+exportDetails.exportPort
+
+
+exportDetails.certifications
+
+
+exportDetails.exportTimestamp
+	enum (Cập nhật thành số 5 - Exported)
+
+
+address (Chuyển ví sang Đơn vị xuất khẩu)
+
+
+string (Mã số thùng container)
+
+
+string (Ví dụ: "Cảng Cát Lái, VN")
+
+
+string (Danh sách chứng nhận: "FDA, Phytosanitary")
+
+
+uint256 (Unix timestamp ngày xuất bến)
+	Off-chain
+
+
+(Đồng bộ hóa)
+	Bảng CoffeeLot:
+
+
+- currentStatus & currentActor
+
+
+Bảng LotStageDetail (Tạo dòng mới):
+
+
+- stageName
+
+
+- stageDataPayload (JSONB)
+
+
+- txHash & blockchainTimestamp
+
+
+Bảng LotTimeline (Tạo dòng mới):
+
+
+- description
+	
+
+Cập nhật thành "EXPORTED" và ví nhà xuất khẩu
+
+
+
+
+Lưu chữ "EXPORT"
+
+
+Object (Chứa: containerId, exportPort, certifications)
+
+
+Lưu mã băm và thời gian block nhận việc
+
+
+
+
+Text: "Lô hàng đã thông quan thành công tại Cảng Cát Lái..."
+	☕ Luồng 6: Nhà rang quốc tế nhận hàng (Final Receipt)
+* Tác nhân: ROASTERY / RETAILER (Chuỗi cửa hàng hoặc nhà mua quốc tế).
+* Mô tả: Khi container cập bến nước bạn (Ví dụ: Cảng Hamburg, Đức), nhà mua quét mã QR, đối chiếu thông số trên App và bấm nút "Xác nhận nhận hàng", kết thúc chuỗi hành trình.
+* Dữ liệu lưu trữ:
+   * On-chain: Cập nhật trường status thành enum số 6 (Received), và cập nhật currentActor thành địa chỉ ví của bên nhận.
+   * Off-chain: Cập nhật bảng CoffeeLot (currentStatus = "RECEIVED"). Tự động chèn dòng mới vào bảng LotTimeline với nội dung văn bản: "Lô hàng đã được bàn giao thành công cho đối tác phân phối quốc tế. Chuỗi cung ứng hoàn tất minh bạch." kèm theo txHash của lệnh ký nhận này.
+
+
+Offchain
+1. Bảng Agent (Hồ sơ các bên tham gia)
+Bảng này dùng để lưu thông tin định danh off-chain của các ví Metamask tham gia vào hệ thống, giúp hiển thị tên người dùng thay vì một địa chỉ ví hex dài loằng ngoằng trên giao diện.
+Tên trường (Field)
+	Kiểu dữ liệu (Postgres)
+	Ràng buộc (Constraints)
+	Mô tả (Description)
+	walletAddress
+	VARCHAR(42)
+	PK (Khóa chính)
+	Địa chỉ ví Ethereum/Polygon của tác nhân (Bắt đầu bằng 0x).
+	name
+	VARCHAR(255)
+	Not Null
+	Tên hiển thị (Tên nông hộ, tên HTX, tên công ty).
+	role
+	VARCHAR(30)
+	Not Null
+	Vai trò trong chuỗi: ADMIN, FARMER, COOPERATIVE, PROCESSOR, EXPORTER, ROASTERY.
+	phone
+	VARCHAR(20)
+	Nullable
+	Số điện thoại liên hệ.
+	email
+	VARCHAR(100)
+	Nullable
+	Địa chỉ email.
+	physicalAddress
+	TEXT
+	Nullable
+	Địa chỉ vật lý (Vùng trồng, vị trí nhà máy).
+	isActive
+	BOOLEAN
+	Default: true
+	Trạng thái hoạt động của tài khoản trên hệ thống app.
+	createdAt
+	TIMESTAMP
+	Default: NOW()
+	Thời điểm tài khoản được đăng ký.
+	updatedAt
+	TIMESTAMP
+	Auto update
+	Thời điểm cập nhật thông tin tài khoản gần nhất.
+	2. Bảng CoffeeLot (Tổng quan lô hàng cà phê)
+Bảng này đóng vai trò là "Xương sống", đồng bộ trạng thái cốt lõi trực tiếp từ Smart Contract về để phục vụ việc tìm kiếm, phân trang và lọc dữ liệu tốc độ cao.
+Tên trường (Field)
+	Kiểu dữ liệu (Postgres)
+	Ràng buộc (Constraints)
+	Mô tả (Description)
+	lotId
+	BIGINT
+	PK (Khóa chính)
+	ID của lô hàng, khớp 100% với mã ID tăng dần trên Smart Contract.
+	qrCode
+	VARCHAR(100)
+	Unique, Nullable
+	Mã định danh QR Code duy nhất dán trên bao bì khi xuất khẩu.
+	currentStatus
+	VARCHAR(20)
+	Not Null, Index
+	Trạng thái hiện tại: CREATED, HARVESTED, PROCESSED, REJECTED, ROASTED, EXPORTED, RECEIVED.
+	currentActor
+	VARCHAR(42)
+	FK (Agent.walletAddress)
+	Địa chỉ ví của người hiện đang giữ/xử lý lô hàng này.
+	farmerAddress
+	VARCHAR(42)
+	FK (Agent.walletAddress)
+	Địa chỉ ví của người nông dân gốc đã gieo trồng lô hàng này.
+	initTxHash
+	VARCHAR(66)
+	Not Null
+	Mã băm giao dịch (Transaction Hash) lúc nông dân khai báo tạo lô hàng.
+	createdAt
+	TIMESTAMP
+	Not Null
+	Thời gian block chứa giao dịch tạo lô hàng được sinh ra trên Blockchain.
+	updatedAt
+	TIMESTAMP
+	Default: NOW()
+	Thời gian cập nhật trạng thái off-chain gần nhất.
+	3. Bảng LotStageDetail (Chi tiết thông số kỹ thuật từng giai đoạn)
+Bảng này áp dụng thiết kế JSONB (Schemaless Payload) để lưu trữ các thuộc tính biến đổi động theo từng bước mà không làm phình cấu trúc bảng SQL.
+Tên trường (Field)
+	Kiểu dữ liệu (Postgres)
+	Ràng buộc (Constraints)
+	Mô tả (Description)
+	id
+	INT
+	PK, Auto Increment
+	Mã tăng tự động của bản ghi chi tiết phân đoạn.
+	lotId
+	BIGINT
+	FK (CoffeeLot.lotId), Index
+	Liên kết tới lô hàng cà phê tương ứng.
+	stageName
+	VARCHAR(20)
+	Not Null
+	Tên giai đoạn thực hiện: FARM, HARVEST, PROCESSING, ROASTING, EXPORT, RECEIPT.
+	actorAddress
+	VARCHAR(42)
+	FK (Agent.walletAddress)
+	Địa chỉ ví của người trực tiếp cập nhật dữ liệu phân đoạn này.
+	stageDataPayload
+	JSONB
+	Not Null
+	Cực kỳ quan trọng: Chứa cấu trúc dữ liệu thực tế sau khi giải nén số thập phân (Xem chi tiết đặc tả JSON ở mục 5).
+	ipfsHash
+	VARCHAR(100)
+	Nullable
+	Đường dẫn băm IPFS chứa bằng chứng hình ảnh/giấy chứng nhận kiểm định chất lượng (nếu có).
+	txHash
+	VARCHAR(66)
+	Not Null
+	Mã băm giao dịch Blockchain của hành động cập nhật phân đoạn này.
+	blockchainTimestamp
+	TIMESTAMP
+	Not Null
+	Thời gian thực của block trên mạng Blockchain.
+	4. Bảng LotTimeline (Lịch sử dòng thời gian)
+Bảng phụ trợ này được tối ưu riêng cho Người 2 (Frontend) để vẽ biểu đồ trục thời gian (Timeline View) cho người tiêu dùng tra cứu nguồn gốc một cách trực quan mà không cần thực hiện các lệnh JOIN bảng phức tạp.
+Tên trường (Field)
+	Kiểu dữ liệu (Postgres)
+	Ràng buộc (Constraints)
+	Mô tả (Description)
+	id
+	INT
+	PK, Auto Increment
+	Mã tăng tự động.
+	lotId
+	BIGINT
+	FK (CoffeeLot.lotId), Index
+	Liên kết tới lô hàng.
+	status
+	VARCHAR(20)
+	Not Null
+	Trạng thái ghi nhận tại thời điểm đó (Ví dụ: HARVESTED).
+	actorAddress
+	VARCHAR(42)
+	FK (Agent.walletAddress)
+	Người thực hiện hành động.
+	description
+	TEXT
+	Not Null
+	Chuỗi văn bản hiển thị thân thiện (Ví dụ: "Nông hộ Y Ksor đã hoàn thành thu hoạch 500kg cà phê chín cây bằng tay").
+	txHash
+	VARCHAR(66)
+	Not Null
+	Mã transaction tương ứng trên mạng.
+	blockchainTimestamp
+	TIMESTAMP
+	Not Null
+	Thời điểm xảy ra sự kiện.
+	
+
+5. Đặc tả cấu trúc bên trong trường stageDataPayload (JSONB)
+Tùy vào giá trị của stageName, trường stageDataPayload sẽ chứa các cặp Key-Value được định dạng dưới dạng số thực (sau khi Backend đã chia khử dấu thập phân từ Smart Contract về):
+Giai đoạn FARM & HARVEST (Nông dân làm)
+JSON
+{
+  "gpsCoordinates": "12.6732° N, 108.0423° E",
+  "elevation": 850,
+  "coffeeVariety": "Robusta TR4",
+  "cultivationMethod": "Organic - VietGAP",
+  "harvestDate": 1779628800,
+  "harvestMethod": "Hand-picked (95% ripe cherries)"
+}
+
+
+Giai đoạn PROCESSING (Hợp tác xã làm)
+JSON
+{
+  "processMethod": "Honey Process",
+  "fermentationTime": 36, 
+  "moistureContent": 12.5, 
+  "impurityRate": 0.2     
+}
+
+
+Giai đoạn ROASTING (Nhà chế biến làm)
+JSON
+{
+  "roastProfile": "Medium Roast",
+  "roastBatchSize": 120,
+  "cuppingScore": 84.50,  
+  "qualityGrade": "Fine Robusta"
+}
+
+
+Giai đoạn EXPORT (Đơn vị xuất khẩu làm)
+JSON
+{
+  "containerId": "TEMU1234567",
+  "exportPort": "Cảng Cát Lái, VN",
+  "certifications": "FDA, Fairtrade",
+  "exportTimestamp": 1780233600
+}
+
+
+
+
+Onchain
+1. Hệ thống Máy trạng thái: enum LotStatus
+Mã trạng thái vòng đời của lô cà phê được lưu dưới dạng số nguyên (uint8) tối giản trên mạng để tiết kiệm Gas, bắt đầu từ số 0.
+Giá trị số (On-chain)
+	Tên Trạng thái (Enum)
+	Vai trò xử lý (Actor)
+	Ý nghĩa nghiệp vụ
+	0
+	Created
+	FARMER
+	Nông dân đăng ký thông tin vùng trồng và giống
+	1
+	Harvested
+	FARMER
+	Nông dân cập nhật sản lượng và ngày thu hoạch
+	2
+	Processed
+	COOPERATIVE
+	Hợp tác xã xác nhận sơ chế và đo độ ẩm
+	3
+	Rejected
+	COOPERATIVE
+	Hợp tác xã hủy/từ chối lô hàng do không đạt chất lượng
+	4
+	Roasted
+	PROCESSOR
+	Nhà máy thực hiện rang xay và chấm điểm Cupping
+	5
+	Exported
+	EXPORTER
+	Đơn vị xuất khẩu thông quan và đóng số Container
+	6
+	Received
+	ROASTERY
+	Nhà rang quốc tế xác nhận nhận hàng thành công
+	2. Các Cấu trúc Dữ liệu Thành phần (Sub-Structs)
+Các cấu trúc dữ liệu này chứa thông số kỹ thuật chi tiết của từng phân đoạn, được nén chặt thành các chuỗi văn bản hoặc số nguyên không dấu.
+2.1. struct FarmData (Dữ liệu vùng trồng)
+Tên trường
+	Kiểu dữ liệu
+	Quy tắc Nén/Giải nén
+	Mô tả
+	gpsCoordinates
+	string
+	Chuỗi text thuần
+	Tọa độ GPS của nông hộ (Ví dụ: "12.6732 N, 108.0423 E")
+	elevation
+	uint256
+	Số nguyên
+	Độ cao so với mực nước biển tính bằng mét (Ví dụ: 850)
+	coffeeVariety
+	string
+	Chuỗi text thuần
+	Giống cà phê trồng (Ví dụ: "Robusta TR4")
+	cultivationMethod
+	string
+	Chuỗi text thuần
+	Phương thức canh tác (Ví dụ: "VietGAP Organic")
+	ipfsEvidenceHash
+	string
+	Chuỗi mã băm IPFS
+	Link chứa hình ảnh chứng nhận quyền sử dụng đất/ảnh nông trại
+	2.2. struct HarvestData (Dữ liệu thu hoạch)
+Tên trường
+	Kiểu dữ liệu
+	Quy tắc Nén/Giải nén
+	Mô tả
+	harvestDate
+	uint256
+	Unix Timestamp
+	Ngày thu hoạch đổi ra giây (Ví dụ: 1779628800)
+	harvestMethod
+	string
+	Chuỗi text thuần
+	Phương pháp hái (Ví dụ: "Hand-picked (95% ripe)")
+	2.3. struct ProcessingData (Dữ liệu sơ chế)
+Tên trường
+	Kiểu dữ liệu
+	Quy tắc Nén/Giải nén
+	Mô tả
+	processMethod
+	string
+	Chuỗi text thuần
+	Phương pháp sơ chế (Ví dụ: "Honey Process")
+	fermentationTime
+	uint256
+	Số nguyên
+	Thời gian lên men tính bằng giờ (Ví dụ: 36)
+	moistureContent
+	uint256
+	Nhân hệ số 10
+	Độ ẩm hạt. Giao diện nhập 12.5% $\rightarrow$ On-chain lưu 125
+	impurityRate
+	uint256
+	Nhân hệ số 100
+	Tỷ lệ tạp chất. Giao diện nhập 0.20% $\rightarrow$ On-chain lưu 20
+	ipfsReportHash
+	string
+	Chuỗi mã băm IPFS
+	Link chứa phiếu kết quả đo đạc chất lượng của HTX
+	2.4. struct RoastingData (Dữ liệu rang xay)
+Tên trường
+	Kiểu dữ liệu
+	Quy tắc Nén/Giải nén
+	Mô tả
+	roastProfile
+	string
+	Chuỗi text thuần
+	Hồ sơ rang (Ví dụ: "Medium Roast")
+	roastBatchSize
+	uint256
+	Số nguyên
+	Khối lượng mẻ rang tính bằng kg (Ví dụ: 120)
+	cuppingScore
+	uint256
+	Nhân hệ số 100
+	Điểm thử nếm SCA. Giao diện nhập 84.50 $\rightarrow$ On-chain lưu 8450
+	qualityGrade
+	string
+	Chuỗi text thuần
+	Phân loại phẩm cấp (Ví dụ: "Fine Robusta")
+	2.5. struct ExportData (Dữ liệu xuất khẩu)
+Tên trường
+	Kiểu dữ liệu
+	Quy tắc Nén/Giải nén
+	Mô tả
+	containerId
+	string
+	Chuỗi text thuần
+	Mã số thùng Container kiểm định (Ví dụ: "TEMU1234567")
+	exportPort
+	string
+	Chuỗi text thuần
+	Cảng xuất khẩu hàng đi (Ví dụ: "Cảng Cát Lái, VN")
+	certifications
+	string
+	Chuỗi text thuần
+	Các giấy phép đính kèm cách nhau bởi dấu phẩy ("FDA, Phytosanitary")
+	exportTimestamp
+	uint256
+	Unix Timestamp
+	Thời gian thông quan hàng hóa tính bằng giây
+	3. Cấu trúc Lô hàng Tổng thể: struct SupplyChainLot
+Đây là tập hợp mẹ, liên kết toàn bộ các cấu trúc dữ liệu thành phần ở trên lại với nhau thành một hồ sơ lô hàng độc nhất.
+Tên trường
+	Kiểu dữ liệu
+	Ràng buộc
+	Mô tả
+	id
+	uint256
+	Khóa chính (Unique ID)
+	Số định danh tăng dần tự động của lô hàng gốc trên Blockchain
+	qrCodeIdentifier
+	string
+	Khóa phụ (Duy nhất)
+	Chuỗi định danh dùng để mã hóa thành hình QR dán lên bao bì
+	status
+	LotStatus
+	Enum (uint8)
+	Trạng thái hiện tại của lô hàng (Nhận giá trị từ 0 đến 6)
+	currentActor
+	address
+	Kiểu địa chỉ (42 kí tự)
+	Địa chỉ ví Metamask của người đang chịu trách nhiệm giữ lô hàng
+	farmerAddress
+	address
+	Kiểu địa chỉ (42 kí tự)
+	Địa chỉ ví của người nông dân tạo ra lô hàng này (Cố định, không đổi)
+	farmDetails
+	FarmData
+	Chứa Struct con
+	Tham chiếu tới thông tin vùng trồng tương ứng
+	harvestDetails
+	HarvestData
+	Chứa Struct con
+	Tham chiếu tới thông tin thu hoạch tương ứng
+	processingDetails
+	ProcessingData
+	Chứa Struct con
+	Tham chiếu tới thông tin sơ chế tương ứng
+	roastingDetails
+	RoastingData
+	Chứa Struct con
+	Tham chiếu tới thông tin rang xay tương ứng
+	exportDetails
+	ExportData
+	Chứa Struct con
+	Tham chiếu tới thông tin xuất khẩu tương ứng
+	4. Trạng thái Lưu trữ Toàn cục (Global Storage States)
+Các biến dùng để lưu trữ dữ liệu trực tiếp vào bộ nhớ trạng thái (Storage) của mạng lưới Blockchain.
+Tên biến
+	Kiểu dữ liệu
+	Tầm hiển thị (Visibility)
+	Mục đích sử dụng
+	_lotIdCounter
+	uint256
+	private
+	Bộ đếm tự động tăng, dùng để cấp phát ID mới cho các lô hàng.
+	coffeeLots
+	mapping(uint256 => SupplyChainLot)
+	public
+	Bản đồ lưu trữ. Truyền vào lotId sẽ lấy ra được toàn bộ thông tin của lô hàng đó.
+	qrToLotId
+	mapping(string => uint256)
+	public
+	Bản đồ tra cứu nhanh. Truyền vào chuỗi QR Code quét được trên bao bì để tìm ngược lại số lotId của hệ thống.
+	
+
+Topic
+-DAPP TRUY XUẤT NGUỒN GỐC CÀ PHÊ ROBUSTA ĐẮK LẮK
+1. Ý tưởng cốt lõi
+Ý tưởng cốt lõi của dự án là xây dựng một nền tảng truy xuất nguồn gốc thế hệ mới cho chuỗi cung ứng cà phê, nơi tính minh bạch và độ tin cậy không còn phụ thuộc vào giấy tờ hay trung gian, mà được đảm bảo bởi cơ chế vận hành tự động của blockchain. Hệ thống hướng đến việc giải quyết các vấn đề về gian lận thông tin, thiếu minh bạch và khó xác thực trong thương mại nông sản thông qua bốn trụ cột chính:
+1.1. Quản trị “Trustless” dựa trên Smart Contract
+Thay vì phụ thuộc vào sự xác nhận của từng bên trong chuỗi cung ứng, toàn bộ quy trình xử lý lô cà phê được mã hóa thành các quy tắc cố định trong smart contract. Các điều kiện chuyển trạng thái, quyền cập nhật dữ liệu và trình tự xử lý được thực thi tự động, đảm bảo rằng không một bên nào có thể tự ý thay đổi hoặc bỏ qua quy trình đã định.
+1.2. Hồ sơ lô hàng bất biến trên Blockchain
+Mỗi lô cà phê được xem như một thực thể số duy nhất, với toàn bộ lịch sử được ghi nhận trên blockchain:
+* Tính bất biến: Dữ liệu sau khi ghi nhận không thể bị chỉnh sửa hoặc xóa bỏ.
+* Tính minh bạch: Mọi bên liên quan đều có thể truy cập và kiểm chứng lịch sử của lô hàng theo thời gian thực.
+1.3. Truy xuất nguồn gốc xuyên suốt chuỗi giá trị
+Hệ thống cho phép theo dõi toàn bộ hành trình của lô cà phê từ nông trại đến đối tác quốc tế, bao gồm các giai đoạn: thu hoạch, sơ chế, rang xay và xuất khẩu. Mỗi giai đoạn đều được ghi nhận với thông tin chi tiết và tác nhân chịu trách nhiệm, tạo thành một chuỗi dữ liệu liên tục và có thể kiểm chứng.
+1.4. Xác thực danh tính và trách nhiệm thông qua ví điện tử
+Mỗi tác nhân trong hệ thống được định danh bằng ví điện tử và thực hiện các hành động thông qua chữ ký số. Chỉ những địa chỉ đã được cấp quyền mới có thể tham gia cập nhật dữ liệu, đảm bảo tính chính danh và trách nhiệm rõ ràng trong từng bước xử lý.
+2. Các tính năng chính (Mô tả chi tiết)
+Hệ thống được thiết kế theo mô hình phân quyền chặt chẽ, trong đó mỗi chức năng không chỉ mô tả hành động mà còn bao gồm điều kiện thực thi, dữ liệu xử lý và kết quả hệ thống.
+A. Nhóm tính năng Quản trị (Admin)
+1. Quản lý vai trò và quyền truy cập
+Mô tả:
+Cho phép quản trị viên cấp phát và thu hồi quyền cho các địa chỉ ví tương ứng với từng vai trò trong chuỗi cung ứng.
+Hành vi hệ thống:
+* Xác thực người thực hiện là quản trị viên hợp lệ
+* Gán vai trò cụ thể cho địa chỉ ví (Farmer, Cooperative, Processor, Exporter, Roastery)
+* Ngăn chặn việc một địa chỉ thực hiện hành động ngoài phạm vi quyền hạn
+Kết quả:
+* Danh sách vai trò được cập nhật
+* Ghi nhận lịch sử thay đổi để phục vụ kiểm toán
+2. Giám sát hoạt động hệ thống
+Mô tả:
+Cung cấp khả năng theo dõi toàn bộ hoạt động của các tác nhân.
+Hành vi hệ thống:
+* Ghi nhận mọi giao dịch liên quan đến lô cà phê
+* Lưu lại thông tin: người thực hiện, thời điểm, loại hành động
+Kết quả:
+* Tạo thành nhật ký hoạt động (audit log) không thể chỉnh sửa
+* Hỗ trợ truy vết khi xảy ra tranh chấp
+3. Kiểm soát quy trình xử lý lô hàng
+Mô tả:
+Đảm bảo mỗi lô cà phê tuân thủ đúng vòng đời đã định.
+Hành vi hệ thống:
+* Kiểm tra trạng thái hiện tại của lô trước khi cho phép cập nhật
+* Từ chối các hành động không đúng thứ tự hoặc sai vai trò
+Kết quả:
+* Duy trì tính nhất quán của toàn bộ chuỗi dữ liệu
+B. Nhóm tính năng Tác nhân chuỗi cung ứng
+1. Nông dân (Farmer)
+1.1. Tạo lô cà phê
+Mô tả:
+Khởi tạo một lô cà phê mới với thông tin ban đầu.
+Dữ liệu đầu vào:
+* Vị trí vùng trồng (tọa độ)
+* Độ cao
+* Giống cây
+* Thông tin canh tác
+* Tài liệu/hình ảnh minh chứng
+Hành vi hệ thống:
+* Kiểm tra quyền của người tạo
+* Tạo mã định danh duy nhất cho lô
+* Lưu trữ dữ liệu và liên kết với tài liệu đính kèm
+Kết quả:
+* Lô cà phê được tạo với trạng thái ban đầu
+* Có thể được truy xuất công khai
+1.2. Cập nhật thông tin thu hoạch
+Mô tả:
+Bổ sung dữ liệu khi quá trình thu hoạch hoàn tất.
+Dữ liệu đầu vào:
+* Ngày thu hoạch
+* Phương pháp thu hoạch
+Hành vi hệ thống:
+* Xác minh lô thuộc quyền sở hữu của nông dân
+* Kiểm tra trạng thái hợp lệ
+* Ghi nhận dữ liệu mới
+Kết quả:
+* Trạng thái lô được cập nhật sang giai đoạn tiếp theo
+* Tạo bản ghi lịch sử
+2. Hợp tác xã (Cooperative)
+2.1. Xác nhận sơ chế
+Mô tả:
+Xác nhận việc xử lý sau thu hoạch và bổ sung dữ liệu kỹ thuật.
+Dữ liệu đầu vào:
+* Phương pháp sơ chế
+* Thời gian lên men
+* Độ ẩm
+* Tỷ lệ tạp chất
+Hành vi hệ thống:
+* Kiểm tra quyền truy cập
+* Xác minh trạng thái lô phù hợp
+* Ghi nhận dữ liệu và liên kết tài liệu
+Kết quả:
+* Lô chuyển sang trạng thái đã sơ chế
+* Dữ liệu phục vụ đánh giá chất lượng được lưu trữ
+2.2. Từ chối lô hàng
+Mô tả:
+Đánh dấu lô không đạt tiêu chuẩn.
+Hành vi hệ thống:
+* Ghi nhận lý do từ chối
+* Cập nhật trạng thái lô thành kết thúc
+Kết quả:
+* Ngăn chặn mọi cập nhật tiếp theo
+* Lưu lại thông tin phục vụ truy vết
+3. Nhà chế biến (Processor)
+3.1. Cập nhật thông tin rang
+Mô tả:
+Ghi nhận quy trình rang và các thông số kỹ thuật.
+Dữ liệu đầu vào:
+* Hồ sơ rang (nhiệt độ, thời gian)
+* Quy mô mẻ rang
+Hành vi hệ thống:
+* Xác thực vai trò
+* Kiểm tra trạng thái lô
+* Lưu dữ liệu và tạo bản ghi mới
+3.2. Đánh giá và phân loại
+Mô tả:
+Đánh giá chất lượng sản phẩm sau rang.
+Dữ liệu đầu vào:
+* Điểm cảm quan
+* Phân loại chất lượng
+Hành vi hệ thống:
+* Ghi nhận kết quả đánh giá
+* Xác định phân loại tương ứng
+Kết quả:
+* Lô cà phê được gán mức chất lượng
+* Là cơ sở cho định giá và giao dịch
+4. Đơn vị xuất khẩu (Exporter)
+4.1. Hoàn tất và xuất lô
+Mô tả:
+Chuẩn bị và xác nhận lô cà phê cho việc xuất khẩu.
+Dữ liệu đầu vào:
+* Thông tin vận chuyển
+* Chứng nhận
+* Mã container
+Hành vi hệ thống:
+* Kiểm tra tính đầy đủ của dữ liệu
+* Ghi nhận thông tin xuất khẩu
+4.2. Tạo mã truy xuất
+Mô tả:
+Tạo mã định danh phục vụ tra cứu.
+Hành vi hệ thống:
+* Sinh mã liên kết đến dữ liệu lô
+* Gắn mã với lô hàng
+Kết quả:
+* Người dùng có thể truy cập thông tin bằng mã này
+5. Đối tác nhận hàng (Roastery)
+5.1. Tra cứu và xác minh
+Mô tả:
+Kiểm tra toàn bộ lịch sử lô cà phê.
+Hành vi hệ thống:
+* Truy xuất dữ liệu theo mã lô
+* Hiển thị toàn bộ các giai đoạn xử lý
+5.2. Xác nhận tiếp nhận
+Mô tả:
+Xác nhận đã nhận hàng.
+Hành vi hệ thống:
+* Kiểm tra trạng thái hiện tại
+* Ghi nhận hành động xác nhận
+Kết quả:
+* Hoàn tất vòng đời lô cà phê
+C. Nhóm tính năng Công khai (Public)
+1. Tra cứu lô cà phê
+Mô tả:
+Cho phép bất kỳ người dùng nào tìm kiếm thông tin lô hàng.
+Hành vi hệ thống:
+* Nhận đầu vào là mã lô hoặc mã truy xuất
+* Truy vấn dữ liệu và hiển thị
+2. Hiển thị dòng thời gian
+Mô tả:
+Trình bày lịch sử xử lý theo thứ tự thời gian.
+Nội dung hiển thị:
+* Giai đoạn xử lý
+* Tác nhân thực hiện
+* Thời điểm
+* Tài liệu liên quan
+3. Truy cập tài liệu
+Mô tả:
+Cho phép xem và tải các tài liệu đính kèm.
+Hành vi hệ thống:
+* Liên kết tài liệu với từng giai đoạn
+* Đảm bảo dữ liệu không bị thay đổi
+4. Bảng điều khiển tổng quan
+Mô tả:
+Cung cấp cái nhìn tổng thể về hệ thống.
+Chức năng:
+* Thống kê số lượng lô theo trạng thái
+* Hiển thị hoạt động gần đây
+* Hỗ trợ theo dõi tình trạng chuỗi cung ứng
+
+
+3. Tổng kết chức năng
+Toàn bộ hệ thống vận hành dựa trên ba nguyên tắc chính:
+* Mỗi hành động đều được xác thực và ghi nhận
+* Mỗi dữ liệu đều có thể truy vết và kiểm chứng
+* Mỗi lô cà phê đều có một lịch sử minh bạch, không thể thay đổi
+
+
+User Journey
+4. User Journey
+4.1. Tổng quan hành trình người dùng
+Hành trình người dùng mô tả cách các tác nhân tương tác với hệ thống từ khi một lô cà phê được tạo ra đến khi hoàn tất vòng đời. Hệ thống bao gồm 5 nhóm người dùng chính: Admin, Farmer, Cooperative, Processor, Exporter, Roastery và Public.
+Toàn bộ hành trình được xây dựng dựa trên nguyên tắc:
+* Mỗi bước gắn với một vai trò cụ thể
+* Mỗi hành động tạo ra một bản ghi không thể thay đổi
+* Mỗi lô cà phê đi theo một luồng trạng thái cố định
+4.2. Giai đoạn 1 – Khởi tạo hệ thống (Admin)
+Tác nhân: Admin
+Mục tiêu: Thiết lập hệ thống và phân quyền
+Hành trình:
+1. Admin truy cập hệ thống và kết nối ví điện tử
+2. Truy cập màn hình quản lý vai trò
+3. Nhập địa chỉ ví của các tác nhân trong chuỗi cung ứng
+4. Gán các vai trò tương ứng (Farmer, Cooperative, Processor, Exporter, Roastery)
+5. Xác nhận cấp quyền
+Kết quả:
+* Các tác nhân được cấp quyền hợp lệ để tham gia hệ thống
+* Hệ thống sẵn sàng vận hành
+4.3. Giai đoạn 2 – Tạo lô cà phê (Farmer)
+Tác nhân: Farmer
+Mục tiêu: Khởi tạo lô cà phê với thông tin ban đầu
+Hành trình:
+1. Farmer kết nối ví và đăng nhập
+2. Truy cập chức năng “Tạo lô cà phê”
+3. Nhập thông tin:
+   * Vị trí vùng trồng (GPS)
+   * Độ cao
+   * Giống cây
+   * Phương pháp canh tác
+4. Tải lên hình ảnh và tài liệu minh chứng
+5. Hệ thống xử lý và tạo mã định danh lô
+6. Farmer xác nhận gửi dữ liệu
+Kết quả:
+* Lô cà phê được tạo với trạng thái CREATED
+* Dữ liệu ban đầu được ghi nhận và có thể truy xuất
+4.4. Giai đoạn 3 – Cập nhật thu hoạch (Farmer)
+Tác nhân: Farmer
+Mục tiêu: Hoàn tất thông tin thu hoạch
+Hành trình:
+1. Farmer truy cập lô đã tạo
+2. Nhập:
+   * Ngày thu hoạch
+   * Phương pháp hái
+3. Xác nhận cập nhật
+Kết quả:
+* Lô chuyển sang trạng thái HARVESTED
+* Ghi nhận dữ liệu thu hoạch vào lịch sử
+4.5. Giai đoạn 4 – Sơ chế và kiểm định (Cooperative)
+Tác nhân: Cooperative
+Mục tiêu: Xác nhận và xử lý sau thu hoạch
+Hành trình:
+1. Cooperative truy cập danh sách lô cần xử lý
+2. Kiểm tra chất lượng ban đầu
+3. Nhập dữ liệu:
+   * Phương pháp sơ chế
+   * Thời gian lên men
+   * Độ ẩm
+   * Tạp chất
+4. Quyết định:
+   * Nếu đạt → xác nhận
+   * Nếu không đạt → từ chối
+Kết quả:
+* Nếu đạt: lô chuyển sang PROCESSED
+* Nếu không đạt: lô chuyển sang REJECTED và kết thúc
+4.6. Giai đoạn 5 – Rang xay và đánh giá (Processor)
+Tác nhân: Processor
+Mục tiêu: Xử lý rang và đánh giá chất lượng
+Hành trình:
+1. Processor nhận lô đã sơ chế
+2. Thực hiện rang
+3. Nhập:
+   * Nhiệt độ, thời gian
+   * Hồ sơ rang
+   * Quy mô mẻ
+4. Đánh giá chất lượng:
+   * Nhập cupping score
+   * Gán phân loại
+Kết quả:
+* Lô chuyển sang ROASTED
+* Lô được gán grade (ví dụ: Specialty nếu đạt tiêu chuẩn)
+4.7. Giai đoạn 6 – Xuất khẩu (Exporter)
+Tác nhân: Exporter
+Mục tiêu: Hoàn tất lô và chuẩn bị xuất khẩu
+Hành trình:
+1. Exporter kiểm tra lô đã rang
+2. Nhập:
+   * Thông tin container
+   * Cảng xuất
+   * Chứng nhận (UTZ, Rainforest, 4C)
+3. Xác nhận xuất khẩu
+4. Hệ thống sinh mã truy xuất (QR code)
+Kết quả:
+* Lô chuyển sang EXPORTED
+* QR code được tạo để phục vụ tra cứu
+4.8. Giai đoạn 7 – Tra cứu và xác minh (Roastery / Public)
+Tác nhân: Roastery / Public
+Mục tiêu: Kiểm tra tính minh bạch của lô cà phê
+Hành trình:
+1. Người dùng quét QR hoặc nhập mã lô
+2. Truy cập trang tra cứu
+3. Xem:
+   * Timeline đầy đủ
+   * Thông tin từng giai đoạn
+   * Tài liệu đính kèm
+4. Kiểm tra tính xác thực thông tin
+Kết quả:
+* Người dùng có thể xác minh nguồn gốc và chất lượng lô cà phê
+4.9. Giai đoạn 8 – Xác nhận nhận hàng (Roastery)
+Tác nhân: Roastery
+Mục tiêu: Hoàn tất vòng đời lô cà phê
+Hành trình:
+1. Roastery truy cập lô đã xuất khẩu
+2. Kiểm tra thông tin
+3. Xác nhận đã nhận hàng
+Kết quả:
+* Lô chuyển sang RECEIVED
+* Vòng đời lô cà phê kết thúc
+4.10. Giai đoạn 9 – Giám sát và phân tích (Public / Admin)
+Tác nhân: Public / Admin
+Mục tiêu: Theo dõi hệ thống
+Hành trình:
+1. Truy cập dashboard
+2. Xem:
+   * Số lượng lô theo trạng thái
+   * Hoạt động gần đây
+3. Phân tích dữ liệu
+Kết quả:
+* Có cái nhìn tổng thể về hệ thống
+* Hỗ trợ giám sát và ra quyết định
+4.11. Tổng kết User Journey
+Hành trình người dùng thể hiện một chuỗi xử lý liên tục:
+Farmer → Cooperative → Processor → Exporter → Roastery → Public
+Đặc điểm chính:
+* Mỗi bước gắn với một vai trò cụ thể
+* Không thể bỏ qua hoặc đảo thứ tự
+* Mọi hành động đều được ghi nhận và có thể truy vết
+
+
+
+
+Nhi
+DAPP TRUY XUẤT NGUỒN GỐC CÀ PHÊ ROBUSTA ĐẮK LẮK
+
+
+Đặt vấn đề
+Việt Nam xuất khẩu Robusta #1 thế giới; Đắk Lắk chiếm ~30% sản lượng
+Cà phê specialty grade bán 3x giá nếu có proof origin minh bạch nhưng hiện tại không có cơ chế xác thực đáng tin cậy
+Vấn đề cốt lõi: Chuỗi cung ứng đa tầng, giấy tờ truyền thống dễ làm giả, Roastery nước ngoài không verify được lô hàng thực
+Xây dựng hệ thống quản lý lô cafe bằng công nghệ Blockchain, minh bạch hóa luồng dữ liệu Từ vườn →  Rang → Xuất khẩu.
+
+
+Phân tích thiết kế hệ thống 
+Role
+	Tác nhân
+	Quyền hạn chính
+	FARMER_ROLE
+	Nông dân Đắk Lắk
+	Tạo lô, nhập dữ liệu thu hoạch
+	COOPERATIVE_ROLE
+	Hợp tác xã
+	Xác nhận, thêm QC sơ chế
+	PROCESSOR_ROLE
+	Nhà máy rang xay
+	Cập nhật profile rang, grade
+	EXPORTER_ROLE
+	Công ty xuất khẩu
+	Đóng lô, tạo shipment
+	ROASTERY_ROLE
+	Roastery nước ngoài
+	Xác nhận nhận hàng, query
+	DEFAULT_ADMIN_ROLE
+	Contract owner
+	Cấp/thu hồi roles
+	Dữ liệu theo dõi theo từng giai đoạn:
+* Farm: Vùng trồng (GPS), độ cao (m), giống cây, ngày thu hoạch, phương pháp hái
+* Sơ chế: Phương pháp lên men, thời gian lên men (giờ), độ ẩm, tạp chất %
+* Rang: Profile rang, nhiệt độ/thời gian, batch size, cupping score, grade (Specialty ≥80)
+* Xuất khẩu: Mã lô, chứng chỉ (UTZ/Rainforest/4C), container ID, ngày/cảng xuất
+
+
+State Machine vòng đời lô hàng: 
+CREATED → HARVESTED → PROCESSED → ROASTED → EXPORTED → RECEIVED
+  (Farmer)  (Farmer)  (Cooperative) (Processor) (Exporter) (Roastery)
+                                                     ↓
+                                               REJECTED (any authorized role)
+Không thể skip trạng thái; mỗi transition chỉ được thực hiện bởi đúng role
+Trạng thái REJECTED là terminal  không thể reopen
+BPMN Luồng nghiệp vụ chính (5 pools)
+* Pool 1 – Farmer: Start → createBatch() → Upload ảnh IPFS → Gắn hash → End
+* Pool 2 – Cooperative: Nhận lô → Kiểm tra điều kiện → [OK] confirmProcessing() / [FAIL] Reject
+* Pool 3 – Processor: Nhận lô đã sơ chế → Rang → Upload profile → updateRoasting() → Grade assignment
+* Pool 4 – Exporter: Kiểm tra chứng chỉ → exportBatch() → Đóng trạng thái
+* Pool 5 – Roastery: Scan QR → Query blockchain → Verify → confirmReceived()
+
+
+Kịch bản: Lô cà phê DAK-2024-001 từ vườn đến Roastery Nhật Bản
+1. [Admin] Cấp FARMER_ROLE cho địa chỉ A, COOPERATIVE_ROLE cho B, PROCESSOR_ROLE cho C, EXPORTER_ROLE cho D, ROASTERY_ROLE cho E
+2. [Farmer A] createBatch() — nhập GPS Buôn Ma Thuột, độ cao 850m, TR4, upload ảnh vườn → Sepolia tx
+3. [Farmer A] updateHarvest() — ngày 15/11/2024, selective pick → tx confirmed
+4. [Cooperative B] confirmProcessing() — washed process 48h, độ ẩm 11.5% → tx
+5. [Processor C] updateRoasting() — Medium roast, 205°C/12min, cupping 82 → SPECIALTY grade
+6. [Exporter D] exportBatch() — UTZ cert, cảng Hồ Chí Minh, container XVNI123
+7. [Roastery E] Scan QR → verify timeline → confirmReceived() → status RECEIVED
+8. [Demo] Public vào /trace/1 → xem toàn bộ timeline, verify hash, download cert
+
+
+Các màn hình chính
+Màn hình 1 – Dashboard (Public)
+* Thống kê tổng số lô theo từng status (chart)
+* Recent activity feed từ The Graph (last 10 events)
+* Search box tra cứu Batch ID
+Màn hình 2 – Tạo lô mới (Farmer)
+* Form nhập: vùng trồng, độ cao, giống, ngày thu hoạch, phương pháp
+* Upload ảnh/tài liệu → IPFS → nhận hash
+* Preview metadata JSON → Submit createBatch(ipfsHash)
+* Hiển thị transaction hash + link Etherscan
+Màn hình 3 – Cập nhật giai đoạn (Role-based)
+* Tự động hiện form phù hợp theo role đang kết nối
+* Upload document + nhập data giai đoạn
+* Submit transaction → await confirmation → toast notify
+Màn hình 4 – Tra cứu lô hàng (Public)
+* Nhập Batch ID hoặc scan QR code
+* Hiển thị timeline đầy đủ (từng stage với timestamp, actor, IPFS link)
+* Badge trạng thái hiện tại (màu theo status)
+* Link verify trên Etherscan
+* Download certificate PDF (từ IPFS data)
+Màn hình 5 – Quản lý Role (Admin)
+* Danh sách địa chỉ & role hiện tại
+* Grant/Revoke role với confirm dialog
+* Audit log giao dịch role
+
+
+
+
+
+
+
+
+System Architecture
+1. Sơ đồ Kiến trúc Hệ thống (Architecture Overview)
+Kiến trúc dApp chia làm 3 tầng chính, tương ứng với các thành phần bạn đã quen thuộc:
+A. Presentation Layer (Frontend - Thay cho Web App truyền thống)
+* Vai trò: Giao diện tương tác với cử tri và Admin.
+* Điểm khác biệt: Không gửi Username/Password về Server mà yêu cầu người dùng "Kết nối ví".
+B. Communication Layer (Provider/Signer - Thay cho API/REST)
+* Vai trò: Cầu nối trung gian. Vì trình duyệt không thể đọc trực tiếp dữ liệu từ Blockchain, nó cần một "nút" (Node) để giao tiếp.
+* Công cụ: Ethers.js đóng vai trò như axios, nhưng thay vì gọi tới https://api.example.com, nó gọi tới Smart Contract Address.
+C. Logic & Data Layer (Blockchain - Thay cho Backend & Database)
+* Smart Contract: Chứa toàn bộ logic (Ai được bầu, kiểm tra xem đã bầu chưa, cộng dồn phiếu).
+* Blockchain Network: Lưu trữ trạng thái (State) vĩnh viễn. Mỗi "phiếu bầu" là một bản ghi không thể xóa bỏ.
+2. Tech Stack
+Thành phần
+	Technology
+	Vai trò
+	Lý do lựa chọn
+	Smart Contract
+	Solidity (^0.8.0)
+	Lập trình luật chơi: Ai được bầu, kiểm tra xem đã bầu chưa, đếm phiếu.
+	Ngôn ngữ phổ biến nhất, nhiều tài liệu mẫu cho Voting.
+	Smart Contract Framework
+	Hardhat
+	Môi trường để biên dịch (compile), chạy thử (test) và đẩy code lên mạng.
+	Hỗ trợ chạy mạng Blockchain ảo tại máy local để dev nhanh.
+	Frontend Library
+	React.js + Vite
+	Tạo giao diện nút bấm, danh sách ứng viên và biểu đồ kết quả.
+	Khởi tạo dự án nhanh, hiệu năng cao, cộng đồng hỗ trợ lớn.
+	Blockchain Bridge Library
+	Ethers.js (v6)
+	Thư viện giúp React call Smart Contract thông qua MetaMask.
+	Thư viện "tiêu chuẩn" để tương tác với Contract, nhẹ và mạnh mẽ.
+	Wallet Interaction
+	MetaMask
+	Nơi người dùng lưu trữ ID (Địa chỉ ví) và ký xác nhận phiếu bầu
+	Ví phổ biến nhất, dễ tích hợp và demo cho giảng viên.
+	Testnet Network
+	Sepolia
+	"Máy chủ" khổng lồ lưu trữ dữ liệu bầu cử (Miễn phí phí gas).
+	Mạng thử nghiệm miễn phí, ổn định, Explorer (Etherscan) rõ ràng.
+	Infrastructure
+	Alchemy 
+	Cổng kết nối lên Ethereum
+	Cung cấp cổng kết nối (Endpoint) miễn phí lên mạng Ethereum.
+	Hosting
+	Vercel
+	Deploy
+	Miễn phí, tự động deploy từ GitHub, có sẵn HTTPS.
+	
+
+3. Folder Structure
+├── backend/       # Chứa code Solidity, Hardhat/Truffle config, Scripts deploy
+│   ├── contracts/
+│   ├── scripts/
+│   ├── test/
+│   └── hardhat.config.js
+└── README.md 
+
+
+
+
+├── frontend/         # Chứa code React.js (tạo bằng Vite hoặc CRA)
+│   ├── src/
+│   │   ├── contracts/ # Nơi chứa file ABI sau khi deploy
+│   │   └── components/
+│   ├── package.json
+│   └── ...
+└── README.md 
+
+
+UI
+FE-FINAL
+
+
+Diagram
+
+
+Use Case
+1. Thành phần sơ đồ (Visual Structure)
+Sơ đồ bao gồm 6 Actor chính nằm ngoài biên hệ thống, và các Use Case nằm trong các khối hình chữ nhật nét đứt đại diện cho các nhóm chức năng của hệ thống DApp Truy Xuất Nguồn Gốc Cà Phê Robusta Đắk Lắk.
+- Hệ thống được chia thành 4 khu vực chính:
+* Quản trị hệ thống 
+* Các chức năng nghiệp vụ cốt lõi
+* Khu vực tra cứu & xác minh
+- Các Use Case được liên kết bằng:
+* Association Line: kết nối Actor với chức năng
+* <<include>>: biểu diễn chức năng bắt buộc hoặc chức năng dùng chung
+Nhóm Tác nhân 1: Admin (Quản trị viên)
+Là chủ sở hữu Smart Contract và chịu trách nhiệm quản lý toàn bộ hệ thống Blockchain Traceability.
+Quản lý vai trò (Grant/Revoke Role)
+Cấp hoặc thu hồi quyền cho các địa chỉ ví tham gia hệ thống.
+Bao gồm các role:
+* FARMER
+* COOPERATIVE
+* PROCESSOR
+* EXPORTER
+* USER
+Quản lý hệ thống
+Cấu hình và khởi tạo hệ thống vận hành:
+* Thiết lập thông số
+* Quản lý quyền truy cập
+* Theo dõi audit log
+Connect Wallet (Include)
+Điều kiện bắt buộc để xác thực quyền Admin trước khi thao tác với Smart Contract.
+Nhóm Tác nhân 2: Farmer 
+Là người khởi tạo lô cà phê và cập nhật dữ liệu sản xuất ban đầu.
+Tạo lô cà phê
+Khởi tạo Batch mới trên Blockchain bằng hàm createBatch().
+Thông tin bao gồm:
+* GPS vùng trồng
+* Độ cao
+* Giống cây
+* Phương pháp canh tác
+* Ảnh và tài liệu IPFS
+Sau khi tạo:
+* Hệ thống sinh Batch ID
+* Trạng thái chuyển sang CREATED
+Cập nhật thu hoạch
+Cập nhật dữ liệu thu hoạch bằng hàm updateHarvest().
+Bao gồm:
+* Ngày thu hoạch
+* Phương pháp hái
+* Chất lượng sơ bộ
+Sau khi xác nhận:
+* Trạng thái chuyển sang HARVESTED
+Connect Wallet (Include)
+Bắt buộc xác thực ví để ghi dữ liệu lên Blockchain.
+Nhóm Tác nhân 3: Cooperative
+Là đơn vị xác nhận chất lượng và xử lý sau thu hoạch.
+Xác nhận & nhập thông tin sơ chế
+Cập nhật dữ liệu sơ chế thông qua confirmProcessing().
+Bao gồm:
+* Phương pháp sơ chế
+* Thời gian lên men
+* Độ ẩm
+* Tạp chất
+Nếu đạt:
+* Trạng thái chuyển sang PROCESSED
+Từ chối lô
+Trong trường hợp không đạt tiêu chuẩn chất lượng:
+* Lô bị chuyển sang trạng thái REJECTED
+* Không thể mở lại vòng đời
+Connect Wallet (Include)
+Bắt buộc xác thực quyền Cooperative trước khi xử lý lô.
+Nhóm Tác nhân 4: Processor 
+Là đơn vị thực hiện rang và đánh giá chất lượng Specialty Coffee.
+Cập nhật thông tin rang
+Thực hiện updateRoasting() để ghi dữ liệu rang.
+Bao gồm:
+* Roast profile
+* Nhiệt độ rang
+* Thời gian rang
+* Batch size
+Đánh giá & phân loại
+Nhập:
+* Cupping score
+* Phân loại chất lượng
+Ví dụ:
+* Specialty Grade nếu score ≥ 80
+Sau khi hoàn tất:
+* Trạng thái chuyển sang ROASTED
+Connect Wallet (Include)
+Yêu cầu xác thực ví Processor để cập nhật dữ liệu.
+Nhóm Tác nhân 5: Exporter
+Đơn vị chịu trách nhiệm hoàn tất lô hàng và xuất khẩu quốc tế.
+Khai báo thông tin xuất khẩu
+Cập nhật dữ liệu:
+* Container ID
+* Cảng xuất
+* Chứng nhận UTZ / Rainforest / 4C
+Xác nhận xuất khẩu lô
+Thực hiện exportBatch() để đóng giai đoạn xuất khẩu.
+Hệ thống:
+* Sinh QR Code truy xuất
+* Gắn dữ liệu shipment vào Blockchain
+Sau khi hoàn tất:
+* Trạng thái chuyển sang EXPORTED
+Connect Wallet (Include)
+Bắt buộc xác thực quyền Exporter.
+Nhóm Tác nhân 6: User
+Bao gồm:
+* Roastery nước ngoài
+* Người dùng công cộng
+Mục tiêu:
+* Xác minh nguồn gốc cà phê
+* Kiểm tra tính minh bạch của chuỗi cung ứng
+Tra cứu lô cà phê
+Người dùng:
+* Quét QR Code
+* Hoặc nhập Batch ID
+Hệ thống hiển thị:
+* Timeline đầy đủ
+* Actor thực hiện
+* Timestamp
+* Dữ liệu IPFS
+* Chứng chỉ xuất khẩu
+Kiểm tra trạng thái
+Xem trạng thái hiện tại của lô:
+* CREATED
+* HARVESTED
+* PROCESSED
+* ROASTED
+* EXPORTED
+* RECEIVED
+* REJECTED
+Xem các giai đoạn của lô hàng
+Theo dõi toàn bộ quá trình:
+Farm → Processing → Roasting → Export → Roastery
+Xem tài liệu & chứng chỉ (IPFS)
+Truy cập:
+* Hình ảnh
+* PDF chứng nhận
+* Metadata JSON
+* Hồ sơ chất lượng
+Xác minh tính xác thực
+Kiểm tra:
+* Transaction Hash
+* Dữ liệu Smart Contract
+* Tính toàn vẹn của thông tin
+Connect Wallet (Include)
+Một số chức năng xác nhận nhận hàng yêu cầu kết nối ví Roastery.
+
+
+Delivarables
+Mục tiêu: Xây dựng proof-of-concept dApp quản lý truy xuất nguồn gốc (nông sản, dược phẩm, chứng nhận bằng cấp…) trên Ethereum testnet. 
+Sản phẩm:
+* 1 smart contract quản lý asset, track trạng thái qua các “role”. 
+* 1 giao diện web đơn giản cho tạo/sửa/truy vấn. 
+* Tài liệu mô tả kiến trúc, luồng nghiệp vụ, phân tích
+* Mô hình nghiệp vụ, use case, BPMN đơn giản. 
+* Thiết kế & code contract (Solidity). 
+* Tích hợp frontend với contract (Web3.js/ethers.js). 
+* DevOps nhẹ (deploy testnet, account, gas, script), demo. 
+* Báo cáo, phân tích bảo mật, hạn chế & future work. 
+Alchemy
+API Key: Lp2_xaIfdMhKWEXuZFtrK
+Endpoint URL: https://eth-sepolia.g.alchemy.com/v2/Lp2_xaIfdMhKWEXuZFtrK
+
+
+Others
+Web2 vs Web3
+1. So sánh sự khác biệt cốt lõi
+Thành phần
+	Kiến trúc truyền thống (Web2)
+	Kiến trúc dApp (Web3)
+	Frontend
+	React/Vue/HTML...
+	React/Vue/HTML... (Không đổi)
+	Backend
+	Node.js/Python/Java (Chạy trên Server riêng)
+	Smart Contract (Chạy trên Blockchain)
+	Database
+	MySQL/MongoDB (Riêng tư, có thể sửa/xóa)
+	Blockchain Ledger (Công khai, bất biến)
+	Xác thực
+	Login bằng Email/Password (Session/JWT)
+	Ví Crypto (Metamask) (Chữ ký số - Digital Signature)
+	
+
+2. Luồng hoạt động của dApp (Architecture Flow)
+Trong Web2, FE gọi API đến BE. Trong Web3, FE "nói chuyện" trực tiếp với Blockchain thông qua một thư viện trung gian.
+Bước 1: Provider & Signer (Thay thế cho Login)
+Thay vì nhập User/Pass, người dùng nhấn "Connect Wallet".
+* Provider: Giúp ứng dụng "đọc" dữ liệu từ Blockchain (như xem số phiếu bầu).
+* Signer (Ví): Giúp người dùng "ký" xác nhận để thực hiện các hành động ghi dữ liệu (như đi bầu cử).
+Bước 2: Smart Contract (Thay thế cho Backend Logic)
+Toàn bộ quy tắc của cuộc bầu cử (ví dụ: một ví chỉ được bầu 1 lần) được viết bằng Solidity và deploy lên mạng Ethereum.
+* BE truyền thống có thể bị Admin sửa code ngầm, nhưng Smart Contract khi đã lên mạng thì không ai sửa được.
+Bước 3: Blockchain (Thay thế cho Database)
+Dữ liệu (số phiếu, danh sách ví đã bầu) không nằm trong ổ cứng của bạn mà nằm trên hàng ngàn máy tính của mạng Ethereum.
+* Đặc điểm: Dữ liệu này tồn tại vĩnh viễn và ai cũng có thể kiểm chứng qua Etherscan.
+3. Authentication trong Web2 và Web3
+1. Web2 vs Web3: Cơ chế "Biết là ai"
+* Web2 (Truyền thống): Bạn cần một "Cuốn sổ hộ khẩu" (Database) lưu Email/Password. Khi bạn nhập đúng, Server tin bạn là "Nguyễn Văn A".
+* Web3 (Blockchain): Không có mật khẩu lưu ở Server. Thay vào đó, nó dùng Mật mã học khóa công khai (Public-key Cryptography).
+2. "Đăng nhập" trong dApp hoạt động thế nào?
+Thực tế, dApp không có bước "Đăng nhập" (Login) theo nghĩa thông thường, mà nó là bước "Xác thực quyền sở hữu" (Authentication via Ownership).
+1. Ví MetaMask: Giữ một Private Key (Khóa bí mật - cực kỳ bảo mật, chỉ mình người dùng giữ).
+2. Public Address: (Ví dụ: 0x123...) được tạo ra từ Private Key đó. Đây là cái tên hiển thị công khai.
+3. Quy trình:
+   * Khi bạn nhấn "Connect Wallet", MetaMask chỉ cung cấp địa chỉ 0x123... cho trang web để trang web biết: "À, ví này đang tương tác với tôi".
+   * Để biết chắc đó là chủ sở hữu: Trang web sẽ yêu cầu bạn "Sign a message" (Ký một đoạn tin nhắn). MetaMask sẽ dùng Private Key để tạo ra một chữ ký số. Smart Contract hoặc Backend sẽ kiểm tra chữ ký đó. Nếu khớp với địa chỉ 0x123..., hệ thống xác nhận: "Đúng là người chủ của ví này đang thao tác".
+3. Làm sao biết địa chỉ 0x123... là ông "Nguyễn Văn A"?
+Đây là phần liên quan đến Logic nghiệp vụ trong đồ án của bạn. Blockchain bản chất là ẩn danh (Anonymous), nên để biết "ai là ai", bạn có 2 cách tiếp cận:
+Cách A: Quản lý theo ID (Định danh bằng Ví)
+Trong hệ thống bỏ phiếu nội bộ, bạn không cần biết tên thật. Bạn chỉ cần biết: "Chỉ có 100 địa chỉ ví trong danh sách này mới được bầu".
+* Admin sẽ thu thập 100 địa chỉ ví của 100 sinh viên trước đó.
+* Admin đưa 100 địa chỉ này vào Smart Contract (gọi là Whitelist).
+* Khi người dùng kết nối ví, Smart Contract chỉ kiểm tra: Address này có nằm trong danh sách 100 người kia không?. Nếu có -> Cho bầu.
+Cách B: Liên kết định danh (Mapping)
+Nếu bạn muốn hiển thị tên "Nguyễn Văn A" trên giao diện:
+* Bạn có thể có một bảng Database nhỏ (Web2) hoặc một mapping trong Smart Contract (Web3):
+   * 0x123...abc => "Nguyễn Văn A"
+   * 0x456...def => "Trần Thị B"
+* Khi ví 0x123... kết nối, dApp sẽ tra cứu và hiển thị: "Chào mừng Nguyễn Văn A".
+4. Tại sao cách này lại an toàn hơn Web2?
+* Không sợ lộ mật khẩu: Vì trang web của bạn không lưu mật khẩu của người dùng. Họ chỉ ký xác nhận thông qua MetaMask.
+* Không thể giả mạo: Chỉ người cầm Private Key mới tạo được chữ ký số hợp lệ cho địa chỉ ví đó.
+* Quyền riêng tư: Người dùng có thể dùng ví 0x1... để bầu cử mà không cần khai báo số điện thoại hay email cá nhân nếu hệ thống không yêu cầu.
+MetaMask
+Để hiểu MetaMask từ đâu ra và làm sao để có nó, bạn hãy hình dung nó như một chiếc "Ví" kiêm "Hộ chiếu" để bạn bước vào thế giới Web3.
+1. MetaMask là gì và từ đâu ra?
+* Nguồn gốc: MetaMask được phát triển bởi ConsenSys, một công ty phần mềm Blockchain hàng đầu thế giới (do một trong những người đồng sáng lập Ethereum tạo ra).
+* Bản chất: Nó là một Non-custodial Wallet (Ví không lưu ký). Điều này có nghĩa là:
+   * Nó không giữ tiền hay mật khẩu của bạn trên server của họ.
+   * Tất cả thông tin nhạy cảm (Private Key) được mã hóa và lưu ngay trên máy tính hoặc điện thoại của bạn.
+* Vai trò: Nó đóng vai trò là "Cầu nối" (Bridge). Trình duyệt web thông thường (Chrome/Edge) không thể đọc dữ liệu trực tiếp từ Blockchain, MetaMask sẽ "tiêm" (inject) một thư viện vào trình duyệt để Web có thể giao tiếp với Smart Contract.
+2. Làm sao để có MetaMask?
+Bạn có thể cài đặt MetaMask dưới dạng Extension (Tiện ích mở rộng) trên trình duyệt máy tính hoặc App trên điện thoại.
+Bước 1: Tải về
+1. Truy cập trang web chính thức: metamask.io. (Cực kỳ quan trọng: Luôn kiểm tra đúng URL để tránh web giả mạo).
+2. Chọn Install MetaMask for Chrome (hoặc trình duyệt bạn đang dùng).
+Bước 2: Tạo ví mới (Create a Wallet)
+1. Chọn "Create a new wallet".
+2. Thiết lập Password: Đây là mật khẩu để mở app trên máy hiện tại (giống như mật khẩu mở khóa điện thoại).
+Bước 3: Lưu trữ Secret Recovery Phrase (CỰC KỲ QUAN TRỌNG)
+Hệ thống sẽ cho bạn 12 từ tiếng Anh ngẫu nhiên (gọi là Seed Phrase).
+* Nó là gì? Đây là "Chìa khóa tổng". Nếu máy tính hỏng, bạn chỉ cần 12 từ này để khôi phục ví trên máy khác.
+* Quy tắc vàng: Không bao giờ chia sẻ 12 từ này cho bất kỳ ai (kể cả admin, giảng viên hay hỗ trợ kỹ thuật). Nếu mất 12 từ này = Mất toàn bộ quyền truy cập ví mãi mãi.
+3. MetaMask tạo ra Địa chỉ ví (ID) như thế nào?
+Ngay sau khi cài đặt xong, MetaMask sẽ tự động tạo cho bạn một địa chỉ ví đầu tiên.
+* Cơ chế: Từ 12 từ bí mật đó, MetaMask dùng thuật toán toán học để tạo ra vô số cặp Private Key (Khóa bí mật) và Public Address (Địa chỉ công khai).
+* Địa chỉ của bạn: Có dạng 0x... (ví dụ: 0x71C7656EC7ab88b098defB751B7401B5f6d8976F).
+   * Bạn dùng địa chỉ này để gửi cho Admin (người tổ chức bầu cử) để họ đưa bạn vào danh sách trắng (Whitelist).
+   * Bạn có thể công khai địa chỉ này cho bất kỳ ai, nó giống như số tài khoản ngân hàng vậy.
+4. Cách dùng MetaMask để làm đồ án E-Voting
+Sau khi có ví, để chạy dApp mà không tốn tiền thật, bạn làm 2 việc:
+1. Chuyển sang mạng Testnet: Trong MetaMask, vào phần Cài đặt -> Nâng cao -> Bật "Show test networks". Sau đó chọn mạng Sepolia.
+2. Lấy ETH giả: Copy địa chỉ ví 0x... của bạn, dán vào các trang "Faucet" (vòi nước) như Alchemy Sepolia Faucet để nhận ETH miễn phí.
+
+
+5. The Inversion Of Control
+Đặc điểm
+	Web2 (Facebook, Zalo, Ngân hàng)
+	Web3 (dApp E-Voting)
+	Ai tạo ID?
+	Hệ thống của bạn tạo (trong Database).
+	User tự tạo bằng MetaMask (ngoại tuyến).
+	Ai giữ ID?
+	Bạn giữ (User mất pass phải xin bạn cấp lại).
+	User tự giữ (User mất ví là mất quyền bầu).
+	Cung cấp ID?
+	User điền Form đăng ký để "xin" ID.
+	User "trưng" địa chỉ ví ra để "định danh".
+	
+
+Archive
+
+
+Huy
+Tui thấy ý tưởng Bầu cử ban đầu phù hợp nhất.
+Chỉ có cái tui thấy mình cần cải thiện ở phần xác thực một chút.Ý tưởng ban đầu dùng ví MetaMask làm định danh nhưng ví này một người có thể sở hữu 10 ví khác nhau nếu họ có 12 ký tự bảo mật, dẫn đến nguy cơ một người bỏ nhiều phiếu.
+Thì cái này nó không đúng với tinh thần bầu cử ở ngoài thực tế. Mỗi người chỉ được bầu 1 lần
+Khuyến
+Quỹ từ thiện minh bạch trên Blockchain
+Vấn đề thực tế ở VN: Nhiều đợt từ thiện (lũ lụt miền Trung, COVID-19, …) bị nghi ngờ về minh bạch tài chính, tiền không đến đúng người.
+Giải pháp DApp:
+Người dùng gửi tiền (ETH hoặc stablecoin như USDC) vào quỹ.
+Mỗi giao dịch được ghi lên blockchain – không thể xóa, không thể sửa.
+Người nhận (hộ nghèo, trường học, bệnh viện) phải có danh tính trên hệ thống (có thể xác minh qua địa chỉ ví).
+Tính năng nổi bật: Ai cũng có thể kiểm tra số dư quỹ, dòng tiền vào – ra theo thời gian thực.
+Tác động: Tăng lòng tin vào các chiến dịch từ thiện, giảm tham nhũng tiền quyên góp.  
+Công nghệ và công cụ triển khai
+Thành phần
+	Công nghệ đề xuất
+	Lý do
+	Smart Contract
+	Solidity ^0.8.0
+	Ngôn ngữ chuẩn cho Ethereum
+	Môi trường phát triển
+	Hardhat hoặc Foundry
+	Hardhat phổ biến, Foundry nhanh hơn 
+	Testing
+	Mocha + Chai (Hardhat)
+	Dễ viết test, nhiều tài liệu 
+	Frontend
+	Next.js + TypeScript
+	Performance tốt, SEO friendly
+	Web3 Library
+	Wagmi + Viem
+	Thay thế hiện đại cho ethers.js 
+	Styling
+	TailwindCSS
+	Nhanh, responsive, đẹp
+	Wallet Connect
+	RainbowKit hoặc ConnectKit
+	UI đẹp, hỗ trợ nhiều wallet
+	Network
+	Sepolia testnet (Ethereum) hoặc Mumbai (Polygon)
+	Gas thấp nếu dùng Polygon
+	IPFS (lưu bằng chứng)
+	Pinata hoặc Web3.Storage
+	Lưu ảnh/chứng từ phi tập trung
+	
+
+Các chức năng cụ thể của DApp
+Đối với Người dùng (Donor):
+1. Xem danh sách tổ chức đã xác minh – Có thể lọc theo khu vực/lĩnh vực
+2. Donate bằng ETH hoặc stablecoin (USDC) – Hiển thị số dư real-time
+3. Xem lịch sử donation – Giao dịch nào, gửi cho ai, bao nhiêu tiền
+4. Theo dõi tác động – Xem các báo cáo từ tổ chức đã nhận tiền
+5. Nhận chứng nhận NFT (tùy chọn) – Mint NFT xác nhận đã donate
+Đối với Tổ chức (NGO/Charity):
+1. Đăng ký xác minh – Gửi thông tin, chờ admin phê duyệt
+2. Xem số dư nhận được – Tự động cập nhật sau mỗi donation
+3. Tạo yêu cầu rút tiền (nếu áp dụng cơ chế bỏ phiếu)
+4. Báo cáo tác động – Đăng ảnh, mô tả, số tiền đã dùng
+Đối với Admin (hoặc Auditor):
+1. Phê duyệt/xác minh tổ chức mới 
+2. Xem audit log – Toàn bộ giao dịch trên blockchain
+3. Flag các báo cáo tác động không chính xác (nếu có cơ chế phạt)
+
+
+
+
+Cấu trúc thư mục dự án mẫu
+charity-dapp/
+├── contracts/
+│   ├── CharityRegistry.sol
+│   ├── DonationPool.sol
+│   ├── WithdrawalRequest.sol
+│   └── ImpactTracking.sol
+├── test/
+│   ├── CharityRegistry.test.js
+│   ├── DonationPool.test.js
+│   └── helpers.js
+├── scripts/
+│   ├── deploy.js
+│   └── verify.js
+├── frontend/
+│   ├── pages/
+│   ├── components/
+│   │   ├── DonateForm.jsx
+│   │   ├── OrganizationList.jsx
+│   │   ├── ImpactFeed.jsx
+│   │   └── DonationHistory.jsx
+│   ├── hooks/
+│   │   ├── useCharityRegistry.js
+│   │   └── useDonationPool.js
+│   └── styles/
+├── hardhat.config.js
+├── .env
+└── README.md
+
+
+
+
+
+
+
+
+
+
+Phương
+Hệ thống phân bổ ngân sách phi tập trung dựa trên Blockchain
+
+
+1. Ý tưởng cốt lõi
+        Hệ thống được xây dựng nhằm giải quyết bài toán phân bổ nguồn lực trong môi trường phi tập trung, nơi người tham gia không cần đặt niềm tin vào một bên trung gian nhưng vẫn đảm bảo tính minh bạch và công bằng.
+Thay vì sử dụng cơ chế bỏ phiếu truyền thống, mỗi người dùng được cấp một lượng ngân sách token cố định và trực tiếp phân bổ nguồn lực này vào các dự án mà họ đánh giá cao. Mô hình này phản ánh chân thực hành vi kinh tế, khi mỗi quyết định đều đi kèm với chi phí cơ hội và thể hiện mức độ ưu tiên của người tham gia.
+Toàn bộ quá trình phân bổ được thực thi thông qua Smart Contract trên Blockchain, đảm bảo rằng dữ liệu là bất biến, minh bạch và không thể bị can thiệp. Kết quả cuối cùng không chỉ là số lượng người ủng hộ, mà là tổng giá trị tài nguyên được phân bổ, từ đó xác định dự án có sức hút kinh tế lớn nhất trong hệ thống.
+2. Các tính năng chính 
+2.1. Nhóm tính năng quản trị (Admin)
+Nhóm này chịu trách nhiệm thiết lập và điều phối toàn bộ quá trình phân bổ ngân sách.
+* Thiết lập chương trình phân bổ (Funding Setup):
+* Tạo chiến dịch phân bổ ngân sách
+* Cấu hình thời gian bắt đầu và kết thúc
+* Xác định tổng ngân sách (token) cho mỗi người tham gia
+* Quản lý dự án (Project Management):
+* Thêm các dự án/proposal vào hệ thống
+* Cập nhật thông tin dự án (tên, mô tả)
+* Đảm bảo danh sách dự án rõ ràng, minh bạch
+* Kiểm soát truy cập (Access Control):
+* Thiết lập danh sách người tham gia hợp lệ (whitelist if need)
+* Giới hạn mỗi ví chỉ được cấp một ngân sách cố định
+* Điều khiển trạng thái hệ thống (System Control):
+
+
+* Mở / đóng quá trình phân bổ
+* Kết thúc và khóa dữ liệu khi hết thời gian
+2.2. Nhóm tính năng User
+* Xác thực ví (Wallet Authentication):
+* Đăng nhập thông qua ví (MetaMask)
+* Không cần tài khoản truyền thống
+* Nhận ngân sách (Token Allocation Initialization):
+* Mỗi người dùng được cấp một lượng token cố định (vd: 100)
+* Đây là nguồn lực để phân bổ
+* Phân bổ ngân sách (Budget Allocation): Người dùng chia token vào các dự án khác nhau
+Có thể:
+* Phân bổ toàn bộ vào một dự án
+* Hoặc chia nhỏ theo mức độ ưu tiên
+* Kiểm soát ràng buộc (Constraint Enforcement):
+* Không được vượt quá tổng ngân sách
+* Có thể chỉnh sửa trước khi kết thúc (optional)
+* Xác nhận giao dịch (Transaction Confirmation):
+* Ký giao dịch để ghi nhận phân bổ lên Blockchain
+* Dữ liệu sau khi ghi là bất biến
+2.3. Nhóm tính năng công khai (Public)
+* Bảng kết quả trực quan (Live Dashboard):
+* Hiển thị tổng token mỗi dự án nhận được
+* Biểu đồ (Pie chart / Bar chart)
+* Xếp hạng dự án (Ranking):
+* Sắp xếp theo mức độ nhận tài trợ
+* Xác định dự án “chiến thắng”
+* Truy vết giao dịch (Audit Trail):
+* Hiển thị lịch sử phân bổ
+* Cho phép kiểm chứng trên Blockchain
+
+
+* Minh bạch dữ liệu: 
+* Bất kỳ ai cũng có thể xem kết quả
+* Không thể chỉnh sửa sau khi kết thúc
+Tasks
+
+
+FE
+UI: FE-FINAL
+REPO: https://github.com/avytran/coffee-trace-frontend
+PHÂN CÔNG
+PHƯƠNG: FRONTEND UI & PUBLIC ARCHITECTURE
+Vai trò: Quản lý khung xương giao diện, cấu hình định tuyến và toàn bộ trải nghiệm các trang công khai bên ngoài (không cần đăng nhập).
+Các trang và Component phụ trách:
+* src/components/Common/Navbar & Footer (Giao diện điều hướng dùng chung)
+* src/components/Common/LoadingSpinner (Hiệu ứng vòng xoay chờ xử lý)
+* STT 1: Home (Từ file: 11-Trang Chủ Giới.html)
+* STT 2: PublicDashboard (Từ file: 1-Coffee Trace - Bảng Điều Khiển.html)
+Logic kỹ thuật cần xử lý:
+* Sử dụng thư viện framer-motion thay thế các đoạn script JavaScript đếm số cũ trên trang Home để tạo hiệu ứng cuốn (scroll animation) mượt mà khi giới thiệu vùng trồng.
+* Tích hợp thư viện recharts vào trang PublicDashboard để vẽ biểu đồ sản lượng, tỷ lệ phân bổ phân đoạn (thiết lập sẵn State động để nhận dữ liệu API từ Người 4).
+HUY: WEB3 INTERACTION & BLOCKCHAIN SECURITY
+Vai trò: Chịu trách nhiệm thiết lập cầu nối mật mã học giữa ứng dụng React và ví Metamask, kiểm soát luồng giao dịch On-chain.
+Các trang và Component phụ trách:
+* src/context/Web3Context (Kho lưu trữ trạng thái ví và phiên đăng nhập toàn cục)
+* STT 4: WalletConnect (Từ file: 3-Coffee Trace - Kết nối ví (Wal.html)
+* STT 5: SelectRole (Từ file: 4-Coffee Trace - Chọn vai trò &.html)
+* STT 8: SignTransaction (Từ file: 9-Coffee Trace - Ký & Gửi Giao D.html)
+Logic kỹ thuật cần xử lý:
+* Viết logic tương tác với window.ethereum trong Web3Context để cung cấp các biến toàn cục qua Hook useWeb3() gồm: walletAddress, signer, currentRole.
+* Xử lý hàm personal_sign tại trang WalletConnect để người dùng ký chữ ký số mật mã gửi lên API xác thực nhận về mã Token JWT.
+* Tích hợp thư viện ethers.js kết nối trực tiếp đến địa chỉ Smart Contract và file ABI để thực thi lệnh ghi dữ liệu của các hàm: createCoffeeLot, verifyAndProcessLot, finalizeExport,... xử lý bắt mã băm giao dịch (txHash) và nạp hiệu ứng chờ đợi (Mined/Receipt).
+KHUYẾN: AGENT WORKSPACE & INTERNAL BUSINESS LOGIC
+Vai trò: Tập trung xử lý các biểu mẫu nhập liệu (Forms) phức tạp và luồng nghiệp vụ nội bộ phân tầng dành riêng cho các tác nhân chuỗi cung ứng.
+Các trang và Component phụ trách:
+* src/components/Common/RouteGuard (Hộ vệ định tuyến - Chặn truy cập lén)x
+* STT 6: AgentDashboard (Từ file: 5-Coffee Trace - Dashboard Tác N.html)
+* STT 7: ManageLots (Từ file: 6-Coffee Trace - Quản Lý Lô Hàng.html)
+* STT 9: LotDetails (Từ file: 7-Coffee Trace - Trang Chi Tiết.html)
+Logic kỹ thuật cần xử lý:
+* Xây dựng lớp màng bảo vệ RouteGuard, kiểm tra nếu trạng thái useWeb3().currentRole === 'GUEST' hoặc token JWT hết hạn sẽ tự động đẩy ngược người dùng về lại trang kết nối ví.
+* Sử dụng thư viện react-hook-form tại trang ManageLots để xử lý Form nhập liệu động có kiểm soát chặt chẽ (Validation) thông số các giai đoạn (FarmData, HarvestData). Tích hợp nút đẩy tệp tin chứng nhận chất lượng lên mạng lưu trữ phi tập trung IPFS thông qua API kết nối.
+* Ứng dụng kỹ thuật hiển thị rẽ nhánh quyền hạn (Conditional Rendering) tại LotDetails: Nếu ví đăng nhập có quyền Hợp tác xã, render nút "Duyệt sơ chế / Từ chối"; nếu có quyền Nhà chế biến, render Form nhập thông số mẻ rang và điểm SCA Cupping Score.
+NHI: FULLSTACK INTEGRATION, DATA STREAM & ADMIN CONTROLLER
+Vai trò: Phụ trách tối ưu hóa tốc độ đọc/truy vấn dữ liệu (CQRS), render dòng thời gian thực tế và xây dựng không gian quản trị tối cao cho Admin hệ thống.
+Các trang và Component phụ trách:
+* src/utils/axiosInstance.ts (Cấu hình Axios Interceptor tự động gán Token)
+* src/components/Traceability/TimelineItem (Nút khối đồ họa trục thời gian)
+* STT 3: Explorer (Từ file: 2-Coffee Trace - Tra Cứu Minh Bạ.html)
+* STT 10: AdminControl (Từ file: 10-Coffee Trace - Quản Trị Hệ Thố.html)
+Logic kỹ thuật cần xử lý:
+* Cấu hình axiosInstance.ts để mọi API gọi đi từ các trang của Người 3 đều tự động đính kèm mã bảo mật Authorization: Bearer <token> vào Header mà không phải viết thủ công lại.
+* Tại trang Explorer, đón chuỗi UUID từ hành động quét mã QR, gọi API công khai nhận về khối cấu trúc dữ liệu đa tầng từ PostgreSQL, sau đó dùng vòng lặp render ra mảng chuỗi các nút TimelineItem sắp xếp theo thời gian tăng dần, gắn link liên kết mã băm sang Etherscan để người tiêu dùng tự đối chứng độc lập.
+* Tại trang AdminControl, hiển thị danh sách các doanh nghiệp, đấu nối API kích hoạt/khóa tài khoản off-chain và phối hợp gửi tham số để Người 2 kích hoạt hàm on-chain grantAgentRole khi phê duyệt cấp quyền.
+src/
+├── components/          # Components dùng chung giữa các trang
+│   ├── Common/
+│   │   ├── Navbar
+│   │   ├── Footer
+│   │   └── LoadingSpinner
+│   ├── Dashboard/
+│   │   ├── StatCard
+│   │   └── ProductionChart
+│   └── Traceability/
+│       ├── TimelineItem
+│       └── LotDetailsModal
+├── context/
+│   └── Web3Context  # Quản lý trạng thái kết nối ví Metamask & JWT token công cục
+├── pages/               # Các trang chính (Chuyển đổi từ file HTML)
+│   ├── Home
+│   ├── PublicDashboard
+│   ├── Explorer
+│   ├── WalletConnect
+│   ├── SelectRole
+│   ├── AgentDashboard
+│   ├── ManageLots
+│   ├── LotDetails
+│   ├── SignTransaction
+│   └── AdminControl
+├── App
+└── main
+
+
+
+
+STT
+	Tên File HTML Hiện Tại
+	Tên React Component Mới (src/pages/)
+	Vai Trò & Logic Web3 / API cần tích hợp
+	1
+	11-Coffee Trace - Trang Chủ Giới.html
+	Home
+	Trang chủ giới thiệu công khai.
+
+
+• Không cần Web3.
+
+
+• Sử dụng framer-motion để xử lý hiệu ứng scroll mượt thay thế cho script hiệu ứng cũ.
+	2
+	1-Coffee Trace - Bảng Điều Khiển.html
+	PublicDashboard
+	Dashboard số liệu công khai.
+
+
+• Gọi API GET /api/public/dashboard/stats.
+
+
+• Sử dụng thư viện recharts để vẽ biểu đồ sản lượng.
+	3
+	2-Coffee Trace - Tra Cứu Minh Bạ.html
+	Explorer
+	Trình tra cứu chuỗi cung ứng công khai.
+
+
+• Xử lý lấy mã QR/ID từ URL query hoặc ô nhập.
+
+
+• Gọi API công khai trả dữ liệu đa tầng của lô hàng để render ra trục thời gian (TimelineItem).
+	4
+	3-Coffee Trace - Kết nối ví (Wal.html
+	WalletConnect
+	Trang cổng kết nối ví Metamask.
+
+
+• Sử dụng hàm personal_sign của ví để ký chuỗi mật mã.
+
+
+• Gọi API POST /api/auth/wallet-login để lấy JWT lưu vào Context/LocalStorage.
+	5
+	4-Coffee Trace - Chọn vai trò &.html
+	SelectRole
+	Trang điều hướng không gian làm việc.
+
+
+• Đọc quyền role từ Web3Context để render động các nút chuyển hướng phù hợp (Nông dân, HTX...).
+	6
+	5-Coffee Trace - Dashboard Tác N.html
+	AgentDashboard
+	Dashboard nội bộ dành cho Doanh nghiệp.
+
+
+• Hiển thị thống kê riêng của tác nhân đó.
+
+
+• Sử dụng RouteGuard để chặn nếu là khách vãng lai (GUEST) hoặc chưa đăng nhập truy cập lén.
+	7
+	6-Coffee Trace - Quản Lý Lô Hàng.html
+	ManageLots
+	Giao diện quản lý/Tạo lô hàng.
+
+
+• Gọi API /api/agents/upload-ipfs để đẩy file chứng nhận lên mạng phi tập trung trước.
+
+
+• Tạo Form điền thông số có kiểm soát bằng react-hook-form.
+	8
+	9-Coffee Trace - Ký & Gửi Giao D.html
+	SignTransaction
+	Trang trung gian xử lý ký giao dịch.
+
+
+• Gọi trực tiếp các hàm createCoffeeLot, verifyAndProcessLot bằng ethers.js hoặc wagmi.
+
+
+• Chờ đợi xác nhận 1 block và hiển thị hiệu ứng Loading nạp kết quả.
+	9
+	7-Coffee Trace - Trang Chi Tiết.html
+	LotDetails
+	Giao diện chi tiết nội bộ của một lô hàng.
+
+
+• Nhận ID qua React Router (/lots/:id).
+
+
+• Hiển thị nút "Duyệt sơ chế" nếu tài khoản có quyền HTX, hoặc nút "Rang xay" nếu có quyền Nhà chế biến (Conditional Rendering).
+	10
+	10-Coffee Trace - Quản Trị Hệ Thố.html
+	AdminControl
+	Bảng điều khiển tối cao của Admin.
+
+
+• Chỉ cho phép ví chứa DEFAULT_ADMIN_ROLE truy cập.
+
+
+• Tích hợp gọi hàm Smart Contract grantAgentRole / revokeAgentRole kết hợp gọi API duyệt off-chain.
+	
+
+BE
+📑 HƯỚNG DẪN CODE BUSINESS ENDPOINTS & SMART CONTRACTS
+Tài liệu này hướng dẫn quy trình, vị trí viết code và quy chuẩn khi triển khai một tính năng nghiệp vụ (Business Feature) mới trong hệ thống, đảm bảo tính đồng bộ giữa Blockchain và Cơ sở dữ liệu Postgres.
+📁 1. Vị Trí Viết Code Trong Thư Mục Dự Án
+Khi nhận một Task nghiệp vụ mới, bạn sẽ làm việc chủ yếu tại các file và thư mục sau:
+Plaintext
+coffee-trace-system/
+├── blockchain/
+│   ├── contracts/
+│   │   └── CoffeeTraceability.sol     <--- [1] VIẾT LOGIC BLOCKCHAIN Ở ĐÂY
+│   └── scripts/
+│       └── deploy.js                  <--- [2] CẬP NHẬT SCRIPT DEPLOY (Nếu cần)
+└── backend/
+    ├── prisma/
+    │   └── schema.prisma              <--- [3] ĐỊNH NGHĨA BẢNG / TRẠNG THÁI MỚI Ở ĐÂY
+    └── src/
+        ├── routes/
+        │   └── coffeeRoutes.js        <--- [4] ĐỊNH NGHĨA URL API TẠI ĐÂY
+        ├── controllers/
+        │   └── coffeeController.js    <--- [5] VIẾT LOGIC ĐIỀU PHỐI (CHÍNH) Ở ĐÂY
+        └── middlewares/
+            └── authMiddleware.js      <--- [6] MIDDLEWARE CHECK QUYỀN (JWT)
+
+
+🔄 2. Quy Trình 4 Bước Khi Code Một Tính Năng Mới
+Mọi tính năng nghiệp vụ (như: Tạo lô hàng, Khảo nghiệm chất lượng, Vận chuyển, Đóng gói) đều phải tuân thủ nghiêm ngặt quy trình 4 bước sau:
+Bước 1: Thiết kế dữ liệu trên Smart Contract (Solidity)
+Mở file blockchain/contracts/CoffeeTraceability.sol.
+* Định nghĩa cấu trúc dữ liệu (struct) cho thực thể mới.
+* Viết hàm xử lý để lưu trữ dữ liệu lên Blockchain (State Variables) kèm theo kích hoạt event để lưu log.
+* Lưu ý: Chỉ lưu các thông tin cốt lõi, không thể chỉnh sửa để tiết kiệm Gas (ví dụ: Mã lô hàng, Địa chỉ ví người tạo, Mã hash chất lượng, Thời gian block).
+Bước 2: Cập nhật Schema Database (Prisma)
+Mở file backend/prisma/schema.prisma.
+* Thêm các trường dữ liệu hoặc tạo bảng mới nếu tính năng yêu cầu lưu trữ các thông tin chi tiết phục vụ cho việc hiển thị ở Frontend (ví dụ: Tên giống cà phê, Hình ảnh nông trại, Ghi chú dài...).
+* Thêm trường txHash (Transaction Hash) vào bảng để làm cầu nối liên kết bản ghi Postgres với giao dịch trên Blockchain.
+Bước 3: Định nghĩa Endpoint Routes (Express)
+Mở file backend/src/routes/coffeeRoutes.js.
+* Định nghĩa URL và phương thức (GET, POST, PUT).
+* Bắt buộc: Đính kèm Middleware xác thực quyền (protect và restrictTo) để chặn các truy cập trái phép.
+* Ví dụ mẫu:
+JavaScript
+router.post('/create-lot', protect, restrictTo('FARMER'), createCoffeeLot);
+
+
+Bước 4: Viết Logic điều phối chính tại Controller (Node.js + Ethers.js)
+Mở hoặc tạo file trong thư mục backend/src/controllers/. Đây là nơi xử lý trung gian cốt lõi:
+1. Nhận dữ liệu từ Frontend gửi lên (req.body).
+2. Gửi giao dịch (Transaction) lên mạng Blockchain thông qua thư viện ethers để thực thi hàm trong Smart Contract đã viết ở Bước 1.
+3. Chờ Blockchain xác nhận thành công và nhận về txHash.
+4. Ghi toàn bộ thông tin chi tiết kèm txHash vào Postgres thông qua prisma.
+5. Trả phản hồi thành công 200 OK về cho Frontend.
+Bước 5: Viết Unit Test cho Feature của mình và bỏ vào Folder Test
+📝 3. Đoạn Code Mẫu Chuẩn Cho Một Task Nghiệp Vụ
+Dưới đây là kiến trúc code mẫu cho tính năng "Tạo lô hàng cà phê mới" để mọi người bắt chước viết theo form chuẩn:
+Lớp Smart Contract (Solidity)
+Solidity
+// blockchain/contracts/CoffeeTraceability.sol
+struct Lot {
+    uint256 id;
+    address farmer;
+    uint256 timestamp;
+    string batchDetails; // Mã hash tóm tắt
+}
+
+
+mapping(uint256 => Lot) public lots;
+event LotCreated(uint256 indexed id, address indexed farmer);
+
+
+function createLot(uint256 _id, string memory _batchDetails) public {
+    lots[_id] = Lot(_id, msg.sender, block.timestamp, _batchDetails);
+    emit LotCreated(_id, msg.sender);
+}
+
+
+Lớp Controller API Backend (Express + Ethers + Prisma)
+JavaScript
+// backend/src/controllers/coffeeController.js
+import { PrismaClient } from '@prisma/client';
+import { getContractInstance } from '../config/blockchain.js'; // File cấu hình ethers chung của dự án
+
+
+const prisma = new PrismaClient();
+
+
+export const createCoffeeLot = async (req, res) => {
+  try {
+    const { lotId, batchDetails, quantity, farmLocation } = req.body;
+    const farmerWallet = req.user.walletAddress; // Lấy từ JWT Auth Middleware sau khi login
+
+
+    // 1. Gọi tương tác với Smart Contract trên Blockchain trước
+    const coffeeContract = getContractInstance(); 
+    const tx = await coffeeContract.createLot(lotId, batchDetails);
+    
+    // Chờ giao dịch được đào xong trên Block
+    const receipt = await tx.wait(); 
+
+
+    // 2. Nếu Blockchain thành công, tiến hành lưu thông tin chi tiết vào Postgres DB
+    const newLot = await prisma.coffeeLot.create({
+      data: {
+        id: lotId,
+        quantity,
+        farmLocation,
+        farmerAddress: farmerWallet.toLowerCase(),
+        txHash: receipt.hash, // Lưu mã giao dịch để đối chiếu nguồn gốc
+        status: "RAW_BEANS"
+      }
+    });
+
+
+    return res.status(201).json({
+      message: "Coffee lot created and anchored on Blockchain successfully!",
+      data: newLot
+    });
+
+
+  } catch (error) {
+    console.error("❌ Business Logic Error:", error);
+    return res.status(500).json({ error: "Failed to execute business transaction." });
+  }
+};
+
+
+⚠️ 4. Các Quy Định Nghiêm Ngặt Khi Làm Task
+1. Nguyên tắc "Blockchain trước - DB sau": Tuyệt đối không lưu dữ liệu vào Postgres nếu giao dịch Blockchain chưa thành công (await tx.wait()). Nếu Blockchain fail, API phải trả về lỗi ngay lập tức.
+2. Ép chữ thường địa chỉ ví (.toLowerCase()): Khi tìm kiếm hoặc lưu trữ địa chỉ ví người dùng xuống Postgres, luôn luôn dùng .toLowerCase() để tránh lỗi so khớp chuỗi do MetaMask sinh ra chữ hoa chữ thường ngẫu nhiên (Checksum format).
+3. Không lưu Private Key bừa bãi: Khi cần ký giao dịch từ phía backend, chỉ sử dụng Private Key của hệ thống đã cấu hình trong file .env thông qua biến toàn cục, không hardcode vào file code nghiệp vụ.
+
+
+PHÂN CÔNG
+Follow:
+* DATA DICTIONARY
+* HƯỚNG DẪN CODE BUSINESS ENDPOINTS & SMART CONTRACTS
+* REPO
+👥 BẢNG PHÂN CHIA TÍCH HỢP & QUY HOẠCH BRANCH (FULL-STACK FEATURE OWNER)
+🧑‍💻 PHƯƠNG: Luồng Khởi tạo & Thu hoạch (Farmer Module)
+* Tên Git Branch bắt buộc: feature/farmer-harvest
+* Nhiệm vụ: Đảm bảo Nông dân tạo được lô hàng, đẩy được ảnh/giấy tờ lên IPFS và cập nhật sản lượng thu hoạch thực tế lên hệ thống.
+1. Smart Contract (Task 2.1 & 2.2) (Solidity)
+* Hàm createCoffeeLot: Nhận FarmData, tăng counter, lưu mapping trạng thái Created. Ràng buộc FARMER_ROLE. Emit LotCreated.
+* Hàm updateHarvestInfo: Nhận lotId, sản lượng, ipfsHash. Ràng buộc trạng thái là Created và người gọi phải là chủ lô (lot.farmerAddress == msg.sender). Đổi trạng thái sang Harvested.
+2. Backend API & Indexer tương ứng (Task 2.5 & Một phần 2.7) (Javascript)
+* API POST /api/agents/upload-ipfs: Nhận file từ Multer, stream sang Pinata để lấy chuỗi băm CID trả về cho Frontend làm tham số đầu vào cho hàm update harvest.
+* Indexer (LotCreated): Lắng nghe sự kiện để chèn một dòng mới vào bảng CoffeeLot trong Postgres với trạng thái ban đầu "CREATED".
+📝 Mã giả phối hợp (feature/tv1-farmer-harvest)
+Solidity
+// --- SMART CONTRACT (SC) ---
+STRUCT FarmData { string treeVariety; string gpsCoordinates; uint256 farmArea; }
+
+
+FUNCTION createCoffeeLot(FarmData data) EXTERNAL onlyRole(FARMER_ROLE) {
+    _lotIdCounter++;
+    supplyChainLots[_lotIdCounter] = Lot({id: _lotIdCounter, status: LotStatus.Created, farmData: data, ...});
+    EMIT LotCreated(_lotIdCounter, msg.sender, data.gpsCoordinates);
+}
+
+
+FUNCTION updateHarvestInfo(uint256 lotId, uint256 yield, string ipfsHash) EXTERNAL {
+    Lot lot = supplyChainLots[lotId];
+    YÊU_CẦU(lot.status == LotStatus.Created, "Sai trạng thái");
+    YÊU_CẦU(lot.farmerAddress == msg.sender, "Không phải chủ lô");
+    
+    lot.actualYield = yield;
+    lot.ipfsHash = ipfsHash;
+    lot.status = LotStatus.Harvested;
+    EMIT LotStatusUpdated(lotId, LotStatus.Harvested, msg.sender);
+}
+
+
+JavaScript
+// --- BACKEND (BE API & INDEXER) ---
+ASYNC FUNCTION uploadIPFS(req, res) {
+    CID = ASYNC pinata.upload(req.file.buffer);
+    TRẢ_VỀ_JSON({ success: true, cid: CID });
+}
+
+
+contract.on("LotCreated", ASYNC (lotId, farmer, gps) => {
+    ASYNC prisma.coffeeLot.create({ data: { id: lotId, farmerAddress: farmer, currentStatus: "CREATED" } });
+});
+
+
+🧑‍💻 NHI: Luồng Thẩm định & Sơ chế (Cooperative Module)
+* Tên Git Branch bắt buộc: feature/tv2-coop-processing
+* Nhiệm vụ: Xử lý nghiệp vụ tại Hợp tác xã, đo đạc độ ẩm/tạp chất, nén dữ liệu kỹ thuật vào JSONB và xử lý rẽ nhánh hủy hàng độc hại.
+1. Smart Contract (Task 2.3 & 2.4)
+* Hàm verifyAndProcessLot: Nhận ProcessingData. Ràng buộc COOPERATIVE_ROLE và trạng thái cũ bắt buộc là Harvested. Đổi trạng thái sang Processed.
+* Hàm rejectLot: Chuyển trạng thái lô sang Rejected. Quan trọng: Thêm modifier hoặc lệnh kiểm tra require(lot.status != LotStatus.Rejected) vào mọi hàm thay đổi trạng thái của cả nhóm để đóng băng lô hàng lỗi vĩnh viễn.
+2. Backend Indexer tương ứng (Một phần Task 2.7)
+* Indexer (LotStatusUpdated - PROCESSED & LotRejected): Bóc tách log giao dịch, cập nhật cột currentStatus tương ứng trong DB. Đồng thời chèn sâu các thông số kỹ thuật (độ ẩm %, tỷ lệ tạp chất %, lý do hủy) vào cột stage_data_payload (loại dữ liệu JSONB) của bảng lot_stage_details.
+📝 Mã giả phối hợp (feature/tv2-coop-processing)
+Solidity
+// --- SMART CONTRACT (SC) ---
+STRUCT ProcessingData { uint256 moisture; uint256 impurity; string packaging; }
+
+
+FUNCTION verifyAndProcessLot(uint256 lotId, ProcessingData procData) EXTERNAL onlyRole(COOPERATIVE_ROLE) {
+    Lot lot = supplyChainLots[lotId];
+    YÊU_CẦU(lot.status == LotStatus.Harvested, "Chưa thu hoạch");
+    YÊU_CẦU(lot.status != LotStatus.Rejected, "Lô hàng đã bị đóng băng");
+    
+    lot.processingData = procData;
+    lot.status = LotStatus.Processed;
+    EMIT LotStatusUpdated(lotId, LotStatus.Processed, msg.sender);
+}
+
+
+FUNCTION rejectLot(uint256 lotId, string reason) EXTERNAL onlyRole(COOPERATIVE_ROLE) {
+    Lot lot = supplyChainLots[lotId];
+    YÊU_CẦU(lot.status == LotStatus.Harvested, "Không thể hủy ở chặng này");
+    
+    lot.status = LotStatus.Rejected;
+    EMIT LotRejected(lotId, msg.sender, reason);
+}
+
+
+JavaScript
+// --- BACKEND (BE INDEXER PARSING JSONB) ---
+contract.on("LotStatusUpdated", ASYNC (lotId, statusEnum, actor) => {
+    IF (statusEnum == 2) { // PROCESSED
+        ASYNC prisma.coffeeLot.update({ where: { id: lotId }, data: { currentStatus: "PROCESSED" } });
+        // Đóng gói thông số kỹ thuật động nén vào JSONB
+        ASYNC prisma.lotStageDetail.create({
+            data: { lotId: lotId, stageName: "COOP_PROCESSING", stageDataPayload: { moisture: "12.5%", impurity: "0.2%" } }
+        });
+    }
+});
+
+
+🧑‍💻 HUY: Luồng Rang xay & Logistics Quốc tế (Logistics Module)
+* Tên Git Branch bắt buộc: feature/tv3-manufacturing-logistics
+* Nhiệm vụ: Đồng bộ khâu chế biến sâu (nhà máy rang) và xuất khẩu. Thiết lập bản đồ ánh xạ mã QR vật lý độc bản lên Blockchain để kích hoạt quyền mở khóa dữ liệu public.
+1. Smart Contract (Task 3.1, 3.2, 3.3)
+* Hàm updateRoastAndGrade: Nhận RoastingData (nhiệt độ, cupping score). Ràng buộc PROCESSOR_ROLE và trạng thái lô là Processed. Đổi trạng thái sang Roasted.
+* Hàm finalizeExport: Nhận _qrCode (chuỗi văn bản định danh). Khai báo mapping toàn mạng mapping(string => uint256) public qrToLotId. Ràng buộc nghiêm ngặt: qrToLotId[_qrCode] == 0 (Mã QR chưa từng được sử dụng). Ghi nhận ánh xạ 2 chiều và đổi trạng thái sang Exported.
+* Hàm confirmReceipt: Nhà rang quốc tế (ROASTERY_ROLE) xác nhận nhận container hàng thành công. Chuyển sang mốc cuối cùng Received.
+2. Backend API & Indexer tương ứng (Task 3.4 & 3.5)
+* API Workspace mở rộng (GET /api/agents/my-lots): Cho phép nhận query tham số trạng thái (?status=PROCESSED để nhà máy rang quét hàng đợi sản xuất; hoặc ?status=ROASTED để nhà xuất khẩu quét đóng hàng container).
+* Indexer (LotExported): Bắt sự kiện nổ ra, cập nhật ngay chuỗi mã QR vật lý vào cột qrCode trong bảng tổng quan CoffeeLot của Postgres.
+📝 Mã giả phối hợp (feature/tv3-manufacturing-logistics)
+Solidity
+// --- SMART CONTRACT (SC) ---
+FUNCTION finalizeExport(uint256 lotId, string calldata qrCode) EXTERNAL onlyRole(EXPORTER_ROLE) {
+    Lot lot = supplyChainLots[lotId];
+    YÊU_CẦU(lot.status == LotStatus.Roasted, "Chưa rang xong");
+    YÊU_CẦU(qrToLotId[qrCode] == 0, "Mã QR vật lý này đã bị trùng!");
+    
+    lot.qrCode = qrCode;
+    lot.status = LotStatus.Exported;
+    qrToLotId[qrCode] = lotId; // Kích hoạt ánh xạ ngược
+    EMIT LotExported(lotId, qrCode, msg.sender);
+}
+
+
+JavaScript
+// --- BACKEND (WORKSPACE API & QR SYNCHRONIZER) ---
+ASYNC FUNCTION getMyLots(req, res) {
+    STRING statusFilter = req.query.status; // Lọc linh hoạt theo hàng đợi của từng Agent
+    DANH_SÁCH = ASYNC prisma.coffeeLot.findMany({ where: { currentStatus: statusFilter } });
+    TRẢ_VỀ_JSON(DANH_SÁCH);
+}
+
+
+contract.on("LotExported", ASYNC (lotId, qrCode, exporter) => {
+    // Lưu mã QR vào DB, chính thức mở cổng cho khách hàng quét tìm kiếm công khai
+    ASYNC prisma.coffeeLot.update({ where: { id: lotId }, data: { qrCode: qrCode, currentStatus: "EXPORTED" } });
+});
+
+
+🧑‍💻 KHUYẾN: Luồng Tra cứu công khai & Cứu hộ dữ liệu (Public Portal & Resiliency)
+* Tên Git Branch bắt buộc: feature/public-explorer-resiliency
+* Nhiệm vụ: Thiết kế cổng tra cứu tốc độ cao phục vụ người tiêu dùng (quét mã QR dựng đồ thị timeline) và thiết lập hệ thống Cronjob chạy nền phòng chống sập mạng RPC.
+1. Smart Contract (Task 4.1 & 4.2)
+* Hàm getCoffeeLot: Viết hàm external view returns (SupplyChainLot memory) độc lập để bên thứ ba/Etherscan đối chiếu dữ liệu gốc on-chain không tốn Gas.
+* Cấu hình Compiler: Thiết lập tối ưu hóa mã nguồn (hardhat.config.js bật optimizer: { enabled: true, runs: 200 }) và tiến hành deploy contract lên mạng Testnet công khai.
+2. Backend API & Cronjob khôi phục (Task 4.3, 4.4, 4.5, 4.6 & Task 3.6)
+* API GET /api/public/lots/:id_or_qrcode: Kiểm tra đầu vào (ID số hay chuỗi mã QR). Dùng kỹ thuật include / LEFT JOIN gộp bảng CoffeeLot và bảng LotStageDetail để trả ra toàn bộ 5 phân đoạn lịch sử trong 1 nốt nhạc.
+* Cronjob Fault Tolerance (Cứu hộ ngầm): Thiết lập chu kỳ chạy ngầm mỗi 5 phút. Lấy block mới nhất từ blockchain đối chiếu với last_processed_block trong Postgres. Nếu phát hiện bị hụt block (do rớt kết nối mạng), kích hoạt queryFilter quét bù dữ liệu lập tức.
+📝 Mã giả phối hợp (feature/tv4-public-explorer-resiliency)
+Solidity
+// --- SMART CONTRACT (SC VIEW) ---
+FUNCTION getCoffeeLot(uint256 lotId) EXTERNAL VIEW RETURNS (SupplyChainLot memory) {
+    RETURN supplyChainLots[lotId]; // Hàm đọc trực tiếp không tốn gas
+}
+
+
+JavaScript
+// --- BACKEND (PUBLIC API & RESILIENCY CRONJOB) ---
+ASYNC FUNCTION getPublicLotExplorer(req, res) {
+    STRING input = req.params.id_or_qrcode;
+    BOOLEAN isId = KIỂM_TRA_ĐỊNH_DẠNG_SỐ(input);
+    
+    KẾT_QUẢ = ASYNC prisma.coffeeLot.findUnique({
+        where: isId ? { id: INT(input) } : { qrCode: input },
+        include: { stages: { orderBy: { blockchainTimestamp: 'asc' } } } // Trả về cấu trúc lồng phân cấp để vẽ Timeline
+    });
+    TRẢ_VỀ_JSON(KẾT_QUẢ);
+}
+
+
+// Module tự sửa lỗi chạy nền phòng vệ hệ thống
+cron.schedule("*/5 * * * *", ASYNC () => {
+    INT blockCurrent = ASYNC provider.getBlockNumber();
+    INT blockLastSaved = ASYNC prisma.systemConfig.find("last_processed_block");
+    
+    IF (blockCurrent > blockLastSaved) {
+        LOG_SÓT = ASYNC contract.queryFilter("ALL_EVENTS", blockLastSaved + 1, blockCurrent);
+        VÒNG_LẶP_CỨU_HỘ(LOG_SÓT); // Triệt tiêu rủi ro mất mát dữ liệu do rớt RPC
+        ASYNC prisma.systemConfig.update("last_processed_block", blockCurrent);
+    }
+});
+
+
+Phase 0
+PHẦN 1: KHỞI TẠO REPOSITORY & MÔI TRƯỜNG LÀM VIỆC (REPO SETUP)
+1. Smart Contract Repository (coffee-trace-contracts)
+* Môi trường: Sử dụng Hardhat (TypeScript) để dễ viết script test và tương thích cao với NodeJS.
+* Cấu trúc cây thư mục mẫu:
+* Plaintext
+coffee-trace-contracts/
+├── contracts/
+│   └── CoffeeTraceability.sol     <-- File chứa toàn bộ Struct, Enum & Interface nền tảng
+├── scripts/
+│   └── deploy_mock.ts             <-- Script biên dịch & deploy thử nghiệm
+├── test/
+│   └── foundation.test.ts   <-- Test case kiểm tra cấu trúc lưu trữ và biên dịch
+├── .env.example
+├── hardhat.config.ts              <-- Khai báo Solidity 0.8.20 + Optimizer
+└── package.json
+* * * Cấu hình Compiler (hardhat.config.ts):
+* TypeScript
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+
+
+const config: HardhatUserConfig = {
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
+};
+export default config;
+* * 2. Backend Repository (coffee-trace-backend)
+* Môi trường: Node.js (TypeScript) + Prisma ORM (để quản lý migration PostgreSQL trực quan).
+* Cấu trúc cây thư mục mẫu:
+* Plaintext
+coffee-trace-backend/
+├── prisma/
+│   └── schema.prisma              <-- File chứa định nghĩa toàn bộ Table Schema SQL
+├── src/
+│   ├── config/                    <-- Cấu hình kết nối DB, Blockchain RPC
+│   ├── indexer/                   <-- Module Listener chạy ngầm bắt sự kiện
+│   └── main.ts
+├── .env.example
+├── tsconfig.json
+└── package.json
+* * ________________
+
+
+PHẦN 2: CẤU TRÚC DỮ LIỆU CỐT LÕI TRÊN CONTRACT (ON-CHAIN DATA)
+Tạo file contracts/CoffeeTraceability.sol. Tại Phase 0 này, contract chỉ cần khai báo toàn bộ Enums, Structs và các Storage Mapping mà chưa cần viết các hàm nghiệp vụ phức tạp.
+Solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+
+contract CoffeeTraceability is AccessControl {
+    
+    // 1. Máy trạng thái vòng đời của Lô cà phê (0 -> 6)
+    enum LotStatus { 
+        Created,      // 0: Nông dân khởi tạo vùng trồng
+        Harvested,    // 1: Nông dân cập nhật thu hoạch
+        Processed,    // 2: Hợp tác xã xác nhận sơ chế đạt chuẩn
+        Rejected,     // 3: Hợp tác xã từ chối/Hủy do không đạt chất lượng
+        Roasted,      // 4: Nhà chế biến rang xay & chấm điểm Cupping
+        Exported,     // 5: Đơn vị xuất khẩu thông quan & cấp mã QR
+        Received      // 6: Nhà rang quốc tế nhận hàng thành công
+    }
+
+
+    // 2. Dữ liệu thành phần cho từng giai đoạn
+    struct FarmData {
+        string gpsCoordinates;     // Tọa độ GPS (Ví dụ: "12.6712, 108.0425")
+        uint256 elevation;         // Độ cao so với mực nước biển (mét)
+        string coffeeVariety;      // Giống cây (Ví dụ: "Robusta TR4")
+        string cultivationMethod;  // Phương pháp canh tác
+        string ipfsEvidenceHash;   // Hash hình ảnh nông trại trên IPFS
+    }
+
+
+    struct HarvestData {
+        uint256 harvestDate;       // Unix timestamp ngày thu hoạch
+        string harvestMethod;      // Cách hái (Ví dụ: "Hái tay chọn lọc chín >95%")
+    }
+
+
+    struct ProcessingData {
+        string processMethod;      // Phương pháp sơ chế (Ướt, Honey, Natural)
+        uint256 fermentationTime;  // Thời gian ủ lên men (tiếng)
+        uint256 moistureContent;   // Độ ẩm hạt (Ví dụ: 12.5% -> lưu số nguyên 125)
+        uint256 impurityRate;      // Tỷ lệ tạp chất (Ví dụ: 1.0% -> lưu số nguyên 10)
+        string ipfsReportHash;     // Chứng nhận chất lượng trên IPFS
+    }
+
+
+    struct RoastingData {
+        string roastProfile;       // Hồ sơ rang (Light, Medium, Dark)
+        uint256 roastBatchSize;    // Khối lượng mẻ rang (kg)
+        uint256 cuppingScore;      // Điểm thử nếm SCA (Ví dụ: 84.5 -> lưu số nguyên 845)
+        string qualityGrade;       // Phân loại chất lượng
+    }
+
+
+    struct ExportData {
+        string containerId;        // Mã định danh thùng Container
+        string exportPort;         // Cảng xuất khẩu
+        string certifications;     // Các chứng chỉ đạt được (UTZ, Rainforest, 4C)
+        uint256 exportTimestamp;   // Thời gian xuất xưởng (Unix timestamp)
+    }
+
+
+    // 3. Cấu trúc tổng hợp thực thể Lô cà phê trên Blockchain
+    struct SupplyChainLot {
+        uint256 id;                // ID định danh lô tăng dần
+        string qrCodeIdentifier;   // Mã duy nhất ánh xạ với mã QR vật lý
+        LotStatus status;          // Trạng thái hiện tại (Enum)
+        address currentActor;      // Địa chỉ ví của người đang giữ lô hàng hiện tại
+        address farmerAddress;     // Ví của người nông dân tạo lô
+        
+        FarmData farmDetails;
+        HarvestData harvestDetails;
+        ProcessingData processingDetails;
+        RoastingData roastingDetails;
+        ExportData exportDetails;
+    }
+
+
+    // 4. Kho lưu trữ và Bản đồ tra cứu toàn cục (Global Storage)
+    uint256 private _lotIdCounter;
+    mapping(uint256 => SupplyChainLot) public coffeeLots;
+    mapping(string => uint256) public qrToLotId; // Tra cứu ngược từ chuỗi QR sang ID số
+
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+}
+
+
+________________
+
+
+PHẦN 3: CẤU TRÚC ĐỊNH NGHĨA DATABASE SCHEMA (OFF-CHAIN DATA)
+Định nghĩa cơ sở dữ liệu đệm PostgreSQL thông qua file prisma/schema.prisma (hoặc chuyển đổi thành câu lệnh CREATE TABLE SQL thô). Kiến trúc sử dụng trường JSONB để lưu linh hoạt các payload đặc thù của từng giai đoạn mà không làm phình hệ thống bảng.
+Đoạn mã
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+// 1. Quản lý thông tin hồ sơ của các ví tham gia chuỗi
+model Agent {
+  walletAddress   String           @id @db.VarChar(42)
+  name            String           @db.VarChar(255)
+  role            String           @db.VarChar(30) // ADMIN, FARMER, COOPERATIVE, PROCESSOR, EXPORTER, ROASTERY
+  phone           String?          @db.VarChar(20)
+  email           String?          @db.VarChar(100)
+  physicalAddress String?          @db.Text
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  lotsManaged     CoffeeLot[]      @relation("CurrentActor")
+  lotsFarm        CoffeeLot[]      @relation("Farmer")
+  stageDetails    LotStageDetail[]
+  timelines       LotTimeline[]
+}
+
+
+// 2. Bảng tổng quan trạng thái lô hàng
+model CoffeeLot {
+  lotId         BigInt           @id // Khớp chính xác với ID tăng dần trên Smart Contract
+  qrCode        String?          @unique @db.VarChar(100)
+  currentStatus String           @db.VarChar(20) // CREATED, HARVESTED, PROCESSED, REJECTED, ROASTED, EXPORTED, RECEIVED
+  currentActor  String           @db.VarChar(42)
+  farmerAddress String           @db.VarChar(42)
+  initTxHash    String           @db.VarChar(66) // Mã transaction hash lúc tạo lô hàng
+  createdAt     DateTime         // Thời gian sinh block trên blockchain
+  updatedAt     DateTime         @default(now())
+
+
+  actor         Agent            @relation("CurrentActor", fields: [currentActor], references: [walletAddress])
+  farmer        Agent            @relation("Farmer", fields: [farmerAddress], references: [walletAddress])
+  stageDetails  LotStageDetail[]
+  timelines     LotTimeline[]
+
+
+  @@index([currentStatus])
+  @@index([currentActor])
+}
+
+
+// 3. Lưu trữ chi tiết thông số kỹ thuật của từng phân đoạn (Sử dụng Payload JSONB)
+model LotStageDetail {
+  id                  Int       @id @default(autoincrement())
+  lotId               BigInt
+  stageName           String    @db.VarChar(20) // FARM, HARVEST, PROCESSING, ROASTING, EXPORT, RECEIPT
+  actorAddress        String    @db.VarChar(42)
+  stageDataPayload    Json      @db.JsonB       // Chứa nội dung động (Độ ẩm, nhiệt độ, giống, tọa độ...)
+  ipfsHash            String?   @db.VarChar(100)
+  txHash              String    @db.VarChar(66)
+  blockchainTimestamp DateTime
+
+
+  lot                 CoffeeLot @fields: [lotId], references: [lotId], onDelete: Cascade)
+  actor               Agent     @fields: [actorAddress], references: [walletAddress])
+
+
+  @@index([lotId])
+}
+
+
+// 4. Phục vụ tính năng hiển thị đồ họa trục thời gian (Timeline View)
+model LotTimeline {
+  id                  Int       @id @default(autoincrement())
+  lotId               BigInt
+  status              String    @db.VarChar(20)
+  actorAddress        String    @db.VarChar(42)
+  description         String    @db.Text
+  txHash              String    @db.VarChar(66)
+  blockchainTimestamp DateTime
+
+
+  lot                 CoffeeLot @fields: [lotId], references: [lotId], onDelete: Cascade)
+  actor               Agent     @fields: [actorAddress], references: [walletAddress])
+
+
+  @@index([lotId])
+}
+
+
+________________
+
+
+PHẦN 4: THỐNG NHẤT QUY TẮC ĐỔI DỮ LIỆU (MAPPING RULES)
+Đội Smart Contract và Backend thống nhất quy chuẩn biểu diễn dữ liệu off-chain từ các thông số on-chain như sau để cấu hình cho Phase 1 không bị lệch pha:
+1. Chuyển đổi Enum thành String:
+   * LotStatus.Created (Số 0 trên mạng) $\rightarrow$ Map thành chuỗi "CREATED" trong DB.
+   * LotStatus.Processed (Số 2 trên mạng) $\rightarrow$ Map thành chuỗi "PROCESSED" trong DB.
+2. Khử dấu thập phân (Fixed-point Arithmetic):
+   * Độ ẩm (moistureContent): Trên giao diện nhập 12.5%, Frontend nhân 10 gửi 125 cho Contract lưu uint256. Backend khi index về sẽ chia cho 10.0 để lưu giá trị thực 12.5 vào payload JSONB.
+   * Điểm thử nếm (cuppingScore): Trên giao diện nhập 84.50, Frontend nhân 100 gửi 8450 lên Contract. Backend khôi phục lại thành 84.5 khi lưu vào database.
+Hoàn thành việc khởi tạo các thư mục này, chạy lệnh tạo bảng DB (npx prisma migrate dev), và biên dịch thử contract (npx hardhat compile) thành công là bạn đã hoàn tất Phase 0, sẵn sàng phân chia code các chức năng cụ thể ở các phase sau.
+
+
+
+
+Phase 1
+GIAI ĐOẠN 1: NỀN TẢNG HỆ THỐNG, PHÂN QUYỀN & XÁC THỰC (FOUNDATION)
+Mục tiêu: Kích hoạt tính năng đăng nhập bằng ví Metamask, phân quyền vai trò (RBAC) trên Blockchain và đồng bộ hồ sơ tác nhân về database đệm.
+1. Phân rã công việc theo Task (Task Decomposition)
+Đội Smart Contract (SC)
+* Task 1.2: Khai báo các biến hằng số đại diện cho vai trò bằng hàm băm mã hóa:
+* Solidity
+bytes32 public constant FARMER_ROLE = keccak256("FARMER_ROLE");
+bytes32 public constant COOPERATIVE_ROLE = keccak256("COOPERATIVE_ROLE");
+bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
+bytes32 public constant EXPORTER_ROLE = keccak256("EXPORTER_ROLE");
+bytes32 public constant ROASTERY_ROLE = keccak256("ROASTERY_ROLE");
+* * * Task 1.3: Triển khai hàm grantAgentRole và revokeAgentRole. Thêm modifier onlyRole(DEFAULT_ADMIN_ROLE) để chỉ cho phép ví Admin tối cao thực thi. Bắt buộc kiểm tra địa chỉ ví nhận quyền khác ví trống: require(account != address(0), "Invalid address").
+Đội Backend (BE)
+* Task 1.4 (API Auth): Viết endpoint POST /api/auth/wallet-login. Tiêu thụ dữ liệu đầu vào gồm walletAddress và signature. Sử dụng thư viện mật mã học (như ethers.utils.verifyMessage) để khôi phục địa chỉ từ chữ ký số, đối chiếu với địa chỉ ví của Client. Nếu khớp, sinh mã JWT Token lưu thời hạn 24h, đính kèm thông tin phân quyền.
+* Task 1.5 (API Profile): Viết endpoint GET /api/auth/profile/:walletAddress để truy vấn thông tin công ty/hồ sơ cá nhân từ bảng Agent.
+* Task 1.6 (API Admin): Viết cụm API cho Admin quản lý thông tin off-chain: GET /api/admin/agents và PUT /api/admin/agents/:walletAddress để cập nhật trạng thái hoạt động (isActive = false/true).
+* Task 1.7 (Indexer Worker V1): Lập trình module lắng nghe sự kiện phát ra từ Blockchain: RoleGranted(bytes32 role, address account, address sender). Khi bắt được log, tự động thực hiện lệnh UPSERT vào bảng Agent trong database PostgreSQL với trạng thái role tương ứng dưới dạng chuỗi văn bản sạch.
+Đội Frontend (FE)
+* Task 1.8: Tích hợp bộ thư viện kết nối ví (Metamask/Core wallet) vào mã nguồn của trang 3-Coffee Trace - Kết nối ví (Wal.html. Lập trình nút bấm kích hoạt Metamask xin quyền ký thông điệp (Sign Message) để gửi chuỗi băm về API login của Backend.
+* Task 1.9: Chuyển đổi mã nguồn trang 4-Coffee Trace - Chọn vai trò &.html. Đọc phân quyền từ mã JWT đã lưu sau khi đăng nhập để hiển thị hoặc vô hiệu hóa các không gian làm việc không thuộc thẩm quyền của ví đó.
+* Task 1.10: Phát triển giao diện quản trị cho trang 10-Coffee Trace - Quản Trị Hệ Thố.html. Kết nối Tab "Quản lý Tác nhân" với API Admin của Backend, xử lý sự kiện khi bấm nút duyệt/hủy quyền tác nhân sẽ kích hoạt giao diện Metamask để ký gửi giao dịch on-chain lên mạng lưới.
+
+
+Phase 2
+GIAI ĐOẠN 2: KHỞI TẠO VÀ SƠ CHẾ (FARMING & PROCESSING STAGE)
+Mục tiêu: Hiện thực hóa luồng đi đầu tiên của hạt cà phê. Nông dân tạo lô hàng, cập nhật thu hoạch. Hợp tác xã thực hiện thu mua, kiểm định chất lượng và sơ chế hoặc từ chối lô hàng.
+1. Phân rã công việc theo Task (Task Decomposition)
+Đội Smart Contract (SC)
+* Task 2.1: Viết hàm createCoffeeLot nhận vào tham số Struct FarmData. Hàm tự động tăng biến đếm _lotIdCounter, khởi tạo một ô nhớ SupplyChainLot mới trong mapping, đặt status = LotStatus.Created và lưu thông tin vùng trồng. Ràng buộc: onlyRole(FARMER_ROLE).
+* Task 2.2: Viết hàm updateHarvestInfo. Kiểm tra ràng buộc: Trạng thái hiện tại của lô hàng phải là LotStatus.Created và ví gọi hàm bắt buộc phải là người khởi tạo ban đầu (lot.farmerAddress == msg.sender). Chuyển trạng thái sang LotStatus.Harvested.
+* Task 2.3: Viết hàm verifyAndProcessLot dành cho Hợp tác xã (COOPERATIVE_ROLE). Chỉ cho phép thực thi khi trạng thái cũ là LotStatus.Harvested. Cập nhật dữ liệu Struct ProcessingData và đổi trạng thái sang LotStatus.Processed.
+* Task 2.4: Viết hàm rẽ nhánh hủy rejectLot. Nếu độ ẩm hoặc tạp chất vượt ngưỡng thu mua, HTX gọi hàm này để đổi trạng thái lô sang LotStatus.Rejected, đóng băng vĩnh viễn lô hàng, không cho phép bất kỳ ai cập nhật thêm thông tin ở các bước sau.
+Đội Backend (BE)
+* Task 2.5 (API IPFS): Viết API POST /api/agents/upload-ipfs tích hợp Middleware Multer để đón các tệp tài liệu kiểm định chất lượng hoặc hình ảnh nông trại. Backend stream tệp tin này trực tiếp sang dịch vụ bên thứ ba (như Pinata) để lấy chuỗi Content Identifier (CID Hash) trả về cho Frontend.
+* Task 2.6 (API Workspace Lots): Viết API nội bộ bảo mật GET /api/agents/my-lots. API này trích xuất địa chỉ ví từ JWT Token, sau đó thực hiện lệnh truy vấn SQL có phân trang để lấy ra các lô hàng liên quan đến ví đó:
+* SQL
+SELECT * FROM coffee_lots WHERE farmer_address = :wallet OR current_actor = :wallet ORDER BY updated_at DESC LIMIT :limit OFFSET :offset;
+* * * Task 2.7 (Indexer Worker V2): Nâng cấp bộ Indexer để lắng nghe đồng thời 4 sự kiện: LotCreated, LotStatusUpdated (cho các mốc trạng thái), và LotRejected. Indexer thực hiện bóc tách log giao dịch, dịch mã số Enum thành chữ văn bản, và nạp thẳng các thông số kỹ thuật (GPS, độ ẩm, giống cây) vào cột stage_data_payload (JSONB) trong bảng lot_stage_details.
+Đội Frontend (FE)
+* Task 2.8: Phát triển giao diện Không gian làm việc dựa trên trang 5-Coffee Trace - Dashboard Tác N.html. Kết nối các thẻ thống kê (Tổng số lô, Lô chờ duyệt, Lô bị hủy) với số liệu thực tế được trả ra từ API my-lots.
+* Task 2.9: Trên trang 6-Coffee Trace - Quản Lý Lô Hàng.html, xây dựng Form nhập liệu động. Khi Nông dân tải ảnh nông trại, FE gọi API upload-ipfs để lấy mã CID, sau đó nạp CID này cùng các thông số tọa độ GPS vào hàm ký gửi giao dịch createCoffeeLot của Metamask.
+* Task 2.10: Tương tự, xây dựng Form nhập liệu kết quả kiểm định cho Hợp tác xã, gắn kèm sự kiện cho hai nút bấm: "Xác nhận & Sơ chế" (gọi hàm verifyAndProcessLot) và "Từ chối lô hàng" (gọi hàm rejectLot).
+2. Cách tiếp cận kỹ thuật (Implementation Approach)
+Áp dụng thiết kế Hybrid Data Storage (Lưu trữ dữ liệu lai) để giải quyết bài toán chi phí mạng lưới. Toàn bộ tài liệu nặng (Hình ảnh, Giấy kiểm định PDF) được đẩy lên mạng phi tập trung IPFS. Smart Contract chỉ lưu trữ chuỗi băm đại diện (CID Hash) có độ dài cố định dưới dạng string. Các thông số kỹ thuật số thực (Độ ẩm 12.5%) được Frontend nhân với 10 thành số nguyên 125 trước khi đẩy lên blockchain. Bộ Indexer ngầm của Backend chịu trách nhiệm chia ngược lại cho 10.0 để ghi dữ liệu sạch vào bảng dữ liệu JSONB trong Postgres, phục vụ tính năng tìm kiếm tốc độ cao.
+Phase 3
+________________
+
+
+GIAI ĐOẠN 3: RANG XAY, XUẤT KHẨU & PHÁT HÀNH MÃ QR (MANUFACTURING & LOGISTICS)
+Mục tiêu: Đưa lô hạt thô qua mẻ rang kỹ thuật, hoàn thiện hồ sơ thông quan quốc tế và tạo liên kết mapping định danh mã QR Code vật lý lên Blockchain.
+1. Phân rã công việc theo Task (Task Decomposition)
+Đội Smart Contract (SC)
+* Task 3.1: Viết hàm updateRoastAndGrade dành cho Nhà chế biến (PROCESSOR_ROLE). Hàm kiểm tra điều kiện trạng thái lô hàng phải ở mốc LotStatus.Processed. Cập nhật thông số mẻ rang và điểm thử nếm lỗi (RoastingData), đổi trạng thái sang LotStatus.Roasted.
+* Task 3.2: Viết hàm finalizeExport dành cho Nhà xuất khẩu (EXPORTER_ROLE). Hàm nhận vào một đối số đặc biệt: string calldata _qrCode. Viết logic xác thực nghiêm ngặt để đảm bảo mã QR này là độc bản trên toàn mạng lưới:
+* Solidity
+require(qrToLotId[_qrCode] == 0, "QR Code identifier already exists");
+* * Hàm thực hiện lưu ánh xạ hai chiều: Ghi nhận mã QR vào cấu trúc lô hàng, đồng thời lưu qrToLotId[_qrCode] = _lotId. Đổi trạng thái sang LotStatus.Exported.
+* Task 3.3: Viết hàm đóng chuỗi cung ứng confirmReceipt dành cho Nhà rang quốc tế (ROASTERY_ROLE), kiểm tra trạng thái cũ bắt buộc phải là LotStatus.Exported. Chuyển trạng thái sang mốc cuối cùng LotStatus.Received.
+Đội Backend (BE)
+* Task 3.4 (Mở rộng API Workspace): Nâng cấp API GET /api/agents/my-lots để hỗ trợ lọc trạng thái dành riêng cho Nhà chế biến (Lọc các lô có trạng thái Processed để đưa vào hàng đợi rang) và Nhà xuất khẩu (Lọc các lô Roasted để đưa vào hàng đợi đóng container).
+* Task 3.5 (Indexer Worker V3): Bổ sung logic bắt sự kiện LotExported(uint256 indexed lotId, string qrCode, address exporter). Khi sự kiện nổ ra, Indexer thực hiện cập nhật chuỗi mã QR vật lý này vào cột qr_code của bảng tổng quan coffee_lots, chính thức mở khóa quyền tra cứu công khai cho lô hàng.
+* Task 3.6 (Resiliency module): Phát triển module tự động khôi phục dữ liệu (Fault Tolerance) cho Indexer. Viết một kịch bản cronjob chạy định kỳ mỗi 5 phút, truy vấn số block cao nhất hiện tại trên mạng Blockchain, đối chiếu với trường last_processed_block lưu trong database để quét bù dữ liệu nếu bộ lắng nghe thời gian thực bị mất kết nối RPC đột ngột.
+Đội Frontend (FE)
+* Task 3.7: Trên giao diện quản lý, thiết kế phân hệ nhập liệu cho Nhà chế biến (Hồ sơ rang, Điểm số thử nếm SCA Cupping) và Form nhập liệu Logistics cho Đơn vị xuất khẩu (Mã thùng Container, Cảng xuất phát, các chứng chỉ UTZ/4C tích chọn).
+* Task 3.8: Tích hợp thư viện sinh mã vạch (như qrcode.react hoặc thư viện tương đương) vào trang 9-Coffee Trace - Ký & Gửi Giao D.html. Khi giao dịch finalizeExport được xác nhận thành công trên mạng lưới, hệ thống tự động bốc chuỗi định danh ngẫu nhiên (UUIDv4) để vẽ thành mã QR trực quan cho phép người dùng bấm nút in tem nhãn.
+2. Cách tiếp cận kỹ thuật (Implementation Approach)
+Mã QR dán trên bao bì sản phẩm áp dụng cơ chế Mã hóa Định danh Rời rạc. Chuỗi text chứa trong mã QR không phải là một URL dẫn link trực tiếp đến server tập trung, mà là một chuỗi mã định danh duy nhất (UUIDv4) đã được đăng ký và xác thực tính độc bản trực tiếp bên trong cấu trúc dữ liệu mapping qrToLotId trên Smart Contract. Điều này triệt tiêu hoàn toàn rủi ro kẻ gian tự sinh mã QR giả mạo để dán đè lên sản phẩm bên ngoài chuỗi cung ứng.
+1. Phase 4
+GIAI ĐOẠN 4: TRA CỨU CÔNG KHAI, DASHBOARD TỔNG QUAN & HOÀN THIỆN (PUBLIC PORTAL)
+Mục tiêu: Đóng gói toàn bộ hệ thống, mở cổng API tra cứu không cần xác thực cho người tiêu dùng đại chúng quét mã QR xem biểu đồ dòng thời gian trực quan.
+1. Phân rã công việc theo Task (Task Decomposition)
+Đội Smart Contract (SC)
+* Task 4.1: Viết hàm view tối ưu getCoffeeLot(uint256 _lotId) external view returns (SupplyChainLot memory) phục vụ cho các mục đích đối chứng on-chain độc lập trực tiếp từ các trình duyệt khối bên thứ ba (như Etherscan/BscScan).
+* Task 4.2: Tiến hành rà soát mã nguồn toàn diện, bật cấu hình biên dịch tối ưu (Optimize với mức 200 runs hoặc cao hơn tùy thuộc vào độ lớn của file byte-code) và thực hiện deploy phiên bản hợp đồng chính thức lên mạng thử nghiệm công khai (Testnet).
+Đội Backend (BE)
+* Task 4.3 (API Public Stats): Phát triển API công khai không cần token bảo mật GET /api/public/dashboard/stats. Thực hiện câu lệnh SQL tính toán tổng hợp tốc độ cao:
+* SQL
+SELECT current_status, COUNT(*) as count FROM coffee_lots GROUP BY current_status;
+* * Task 4.4 (API Public Explorer): Phát triển API tra cứu lõi dữ liệu sản phẩm GET /api/public/lots/:id_or_qrcode. Kiểm tra xem tham số đầu vào là số ID hay chuỗi định danh mã QR. Thực hiện câu lệnh kết nối nhiều bảng (LEFT JOIN giữa bảng coffee_lots, bảng Agent, và bảng lot_stage_details) để gom toàn bộ dữ liệu của 5 phân đoạn lịch sử thành một cấu trúc JSON phân cấp duy nhất trả về cho Client.
+* Task 4.5 (API Timeline): Viết API GET /api/public/lots/:id/timeline sắp xếp theo thứ tự thời gian tăng dần của block (ORDER BY blockchain_timestamp ASC) để phục vụ riêng cho tính năng vẽ đồ thị dòng thời gian.
+* Task 4.6 (API Audit): Viết API phân trang dành riêng cho tài khoản quản trị GET /api/admin/audit-logs để đọc nhật ký vận hành off-chain từ bảng audit_logs.
+Đội Frontend (FE)
+* Task 4.7: Hoàn thiện trang chủ hệ thống 11-Coffee Trace - Trang Chủ Giới.html. Kết nối các khối số thống kê tổng lượng Robusta Đắk Lắk được số hóa với API public/dashboard/stats.
+* Task 4.8: Nhúng thư viện đồ họa trực quan Plotly.js vào cấu trúc trang 1-Coffee Trace - Bảng Điều Khiển.html để tự động vẽ biểu đồ sản lượng thu hoạch và phân bổ trạng thái hàng hóa thời gian thực từ dữ liệu API công khai.
+* Task 4.9: Lập trình hoàn thiện tính năng lõi trên trang 2-Coffee Trace - Tra Cứu Minh Bạ.html. Thiết kế một ô nhập liệu tra cứu kết hợp nút kích hoạt camera quét mã QR. Khi nhận được chuỗi định danh, gọi API public/lots/:id_or_qrcode và API timeline, sau đó duyệt mảng dữ liệu để dựng cấu trúc cây đồ họa Timeline đẹp mắt. Tại mỗi nút mốc lịch sử, hiển thị chi tiết tên đơn vị thực hiện, các thông số kỹ thuật kèm theo một liên kết trực tiếp (Hyperlink) trỏ thẳng sang mạng lưới Blockchain Explorer để người tiêu dùng tự tay đối chứng tính minh bạch của mã băm giao dịch (txHash).
+2. Cách tiếp cận kỹ thuật (Implementation Approach)
+Áp dụng mô hình thiết kế CQRS (Command Query Responsibility Segregation - Tách biệt trách nhiệm Đọc/Ghi) để bảo vệ hệ thống:
+1. Luồng ghi (Write Command): Diễn ra trực tiếp trên mạng lưới Blockchain thông qua việc người dùng tương tác ký ví Metamask trên Frontend (Độ trễ từ vài giây đến vài chục giây tùy thuộc vào tốc độ đóng block của mạng lưới).
+2. Luồng đọc (Read Query): Khi hàng ngàn người tiêu dùng cùng đồng thời quét mã QR trên bao bì gói cà phê ngoài siêu thị, toàn bộ các lượt truy vấn sẽ được chuyển hướng xử lý 100% vào hệ thống cơ sở dữ liệu đệm PostgreSQL (Off-chain Cache Database). Nhờ việc thiết lập cấu trúc chỉ mục chuyên sâu (GIN Index) trên trường dữ liệu JSONB của phân đoạn kỹ thuật, tốc độ phản hồi của API tra cứu minh bạch được duy trì ổn định ở mức cực kỳ thấp (dưới 50ms), giúp loại bỏ hoàn toàn hiện tượng nghẽn mạng RPC của nút Blockchain và mang lại trải nghiệm mượt mà, tức thì cho người dùng cuối.
+Guide
+PHẦN 1: HƯỚNG DẪN CHI TIẾT CHO TỪNG HÀM TRONG SMART CONTRACT (CoffeeTraceability.sol)
+1. Hàm Khởi tạo Lô hàng (createCoffeeLot)
+* Mục đích: Nông dân khai báo thông tin nông trại và vùng trồng để sinh ra một lô cà phê mới trên Blockchain.
+* Logic xử lý chi tiết:
+   1. Kiểm tra ví gọi hàm có quyền FARMER_ROLE hay không.
+   2. Tăng biến đếm ID toàn cục _lotIdCounter lên 1 đơn vị.
+   3. Tạo một ô nhớ Struct SupplyChainLot mới gắn với ID vừa sinh.
+   4. Gán trạng thái ban đầu của lô hàng là LotStatus.Created (Số 0).
+   5. Lưu ví người gọi vào cả 2 trường: farmerAddress (Cố định suốt đời) và currentActor (Người giữ hàng hiện tại).
+   6. Nạp thông tin cấu trúc dữ liệu vùng trồng FarmData.
+   7. Phát sự kiện LotCreated để báo cho Backend biết.
+2. Hàm Cập nhật Thu hoạch (updateHarvestInfo)
+* Mục đích: Người nông dân bổ sung ngày hái và kỹ thuật hái sau khi kết thúc vụ thu hoạch trên nông trại.
+* Logic xử lý chi tiết:
+   1. Kiểm tra điều kiện: Ví gọi hàm bắt buộc phải là người nông dân đã tạo ra lô hàng này (lot.farmerAddress == msg.sender). Tránh việc nông dân B cập nhật đè lên lô hàng của nông dân A.
+   2. Kiểm tra trạng thái: Lô hàng phải đang ở trạng thái vừa khởi tạo (LotStatus.Created). Nếu lô hàng đã mang đi sơ chế hoặc xuất khẩu thì không được sửa thông tin thu hoạch nữa.
+   3. Nạp thông tin HarvestData vào ô nhớ của lô hàng.
+   4. Chuyển trạng thái máy sang mốc LotStatus.Harvested (Số 1).
+   5. Phát sự kiện LotStatusUpdated.
+3. Hàm Xác nhận & Sơ chế (verifyAndProcessLot)
+* Mục đích: Hợp tác xã kiểm tra chất lượng hạt thô thu mua từ nông dân, nhập thông số kỹ thuật và tiến hành sơ chế (Ướt, Honey, Tự nhiên).
+* Logic xử lý chi tiết:
+   1. Kiểm tra ví gọi hàm có quyền COOPERATIVE_ROLE hay không.
+   2. Kiểm tra trạng thái cũ: Lô hàng bắt buộc phải ở trạng thái LotStatus.Harvested.
+   3. Chặn lỗi kỹ thuật chất lượng: Độ ẩm đầu vào không được vượt quá ngưỡng quy định (Ví dụ: Độ ẩm hạt thô không được > 14%, tương đương giá trị lưu trữ _processData.moistureContent <= 140). Nếu độ ẩm quá cao, hàm sẽ tự động hủy giao dịch (Revert) để bảo vệ chất lượng chuỗi.
+   4. Cập nhật dữ liệu sơ chế ProcessingData và đổi trạng thái lô sang LotStatus.Processed (Số 2).
+   5. Cập nhật quyền giữ hàng hiện tại currentActor sang ví của Hợp tác xã.
+4. Hàm Từ chối Lô hàng (rejectLot)
+* Mục đích: Hợp tác xã hủy bỏ lô hàng ngay lập tức nếu phát hiện hạt bị nấm mốc, sâu bệnh hoặc không đạt bất kỳ tiêu chí thu mua tối thiểu nào.
+* Logic xử lý chi tiết:
+   1. Xác thực quyền gọi hàm: onlyRole(COOPERATIVE_ROLE).
+   2. Kiểm tra trạng thái: Lô hàng phải đang ở mốc chờ duyệt LotStatus.Harvested.
+   3. Đổi trạng thái lô hàng vĩnh viễn sang LotStatus.Rejected (Số 3). Khi đã ở trạng thái này, tất cả các hàm cập nhật ở phía sau (Rang xay, Xuất khẩu) đều sẽ bị chặn đứng do không thỏa mãn điều kiện trạng thái.
+5. Hàm Cập nhật Rang xay (updateRoastAndGrade)
+* Mục đích: Nhà máy chế biến thực hiện rang, ghi nhận hồ sơ nhiệt độ mẻ rang và chấm điểm thử nếm hương vị theo tiêu chuẩn SCA (Cupping Score).
+* Logic xử lý chi tiết:
+   1. Xác thực quyền gọi hàm: onlyRole(PROCESSOR_ROLE).
+   2. Kiểm tra trạng thái cũ: Lô hàng phải hoàn thành sơ chế đạt chuẩn (LotStatus.Processed).
+   3. Nạp thông số RoastingData (Hồ sơ rang, Khối lượng, Điểm số thử nếm).
+   4. Đổi trạng thái sang LotStatus.Roasted (Số 4), chuyển currentActor về ví của Nhà chế biến.
+6. Hàm Đóng gói & Xác nhận Xuất khẩu (finalizeExport)
+* Mục đích: Đơn vị Logistics đóng container thông quan và gán mã định danh QR vật lý độc bản lên trên Blockchain.
+* Logic xử lý chi tiết:
+   1. Xác thực quyền gọi hàm: onlyRole(EXPORTER_ROLE).
+   2. Kiểm tra trạng thái: Lô hàng phải hoàn tất bước rang xay phân loại (LotStatus.Roasted).
+   3. Ràng buộc triệt tiêu mã QR giả mạo: Kiểm tra xem chuỗi văn bản mã QR (_qrCode) truyền xuống đã từng được gán cho lô hàng nào trong quá khứ chưa bằng cách tra cứu bản đồ ánh xạ: require(qrToLotId[_qrCode] == 0, "Loi: Ma QR nay da duoc su dung"). Nếu mã QR đã tồn tại, giao dịch lập tức bị hủy bỏ để ngăn kẻ gian làm giả tem nhãn dán đè lên bao bì.
+   4. Ghi nhận thông tin thông quan ExportData và chuỗi mã QR vào cấu trúc lô hàng.
+   5. Thiết lập ánh xạ hai chiều: qrToLotId[_qrCode] = _lotId.
+   6. Chuyển trạng thái sang LotStatus.Exported (Số 5).
+7. Hàm Xác nhận Nhận hàng (confirmReceipt)
+* Mục đích: Nhà rang quốc tế (đơn vị mua hàng tại nước ngoài) bấm nút xác nhận đã nhận đủ số lượng container, kết thúc chuỗi cung ứng.
+* Logic xử lý chi tiết:
+   1. Xác thực quyền gọi hàm: onlyRole(ROASTERY_ROLE).
+   2. Kiểm tra trạng thái: Hàng hóa bắt buộc phải ở trạng thái đã xuất khẩu đi trên biển (LotStatus.Exported).
+   3. Đổi trạng thái sang mốc đích cuối cùng LotStatus.Received (Số 6). Giao dịch này đóng băng toàn bộ vòng đời, hoàn tất quy trình truy xuất nguồn gốc của một mã QR hàng hóa.
+________________
+
+
+PHẦN 2: HƯỚNG DẪN CHI TIẾT CHO TỪNG ENDPOINT API BACKEND (Controller/Service Layer)
+Hệ thống API Backend đóng vai trò làm cổng kết nối dữ liệu đệm, xử lý xác thực quyền hạn và tăng tốc độ đọc dữ liệu cho người dùng cuối.
+1. API Đăng nhập Mật mã học (POST /api/auth/wallet-login)
+* Dữ liệu nhận vào (Body JSON): { "walletAddress": "0x123...", "signature": "0xabc..." }
+* Dữ liệu trả ra (Response JSON): Chuỗi token định dạng JWT bảo mật và thông tin cấu hình profile.
+* Logic xử lý chi tiết:
+   1. Đón nhận địa chỉ ví và chuỗi mã băm chữ ký số gửi lên từ trình duyệt.
+   2. Tạo lại chuỗi thông điệp văn bản chuẩn đã quy định thống nhất với Frontend (Ví dụ: "Xác nhận đăng nhập hệ thống Coffee Trace lúc: [Ngày hiện tại]").
+   3. Sử dụng thư viện mật mã của Node.js (ethers.verifyMessage) truyền vào thông điệp và chuỗi signature để khôi phục địa chỉ ví công khai của người đã ký.
+   4. So khớp: Nếu địa chỉ ví khôi phục không trùng khớp với walletAddress gửi lên $\rightarrow$ Trả về mã lỗi 410 Unauthorized (Cảnh báo gian lận chữ ký số).
+   5. Kiểm tra phân quyền: Thực hiện truy vấn PostgreSQL đọc bảng Agent. Nếu ví đã được cấu hình cấp quyền, lấy ra thông tin vai trò (FARMER, COOPERATIVE...). Nếu ví chưa được cấp, mặc định gán quyền khách vãng lai GUEST.
+   6. Sinh mã token mã hóa JWT đính kèm Payload { walletAddress, role }, đặt thời hạn hết hạn sau 24h để Frontend lưu vào localStorage.
+2. API Lưu trữ tài liệu phi tập trung (POST /api/agents/upload-ipfs)
+* Dữ liệu nhận vào (Form Data): Một tệp tin hình ảnh nông trại hoặc tệp tài liệu PDF kiểm định chất lượng (Multipart File).
+* Dữ liệu trả ra (Response JSON): { "success": true, "ipfsHash": "QmZ..." }
+* Logic xử lý chi tiết:
+   1. Sử dụng thư viện Middleware Multer để đón và đọc luồng tệp tin (File Stream) tạm thời trên RAM server Backend.
+   2. Khởi tạo một cấu trúc FormData mới bằng thư viện form-data của Node.js, nạp tệp tin vừa nhận vào trường dữ liệu gửi đi.
+   3. Thực hiện lệnh gọi HTTP Post (sử dụng thư viện Axios) chuyển tiếp trực tiếp file này sang dịch vụ cổng lưu trữ IPFS bên thứ ba (như Pinata API) kèm theo cặp khóa bảo mật pinata_api_key và pinata_secret_api_key lấy từ file cấu hình môi trường .env.
+   4. Cổng IPFS thực hiện băm tệp tin và trả về mã CID Hash độc bản dài 46 ký tự (Ví dụ: QmZ8wY...).
+   5. Backend bắt lấy chuỗi này và trả về ngay lập tức cho Frontend, giải phóng bộ nhớ đệm RAM của máy chủ.
+3. API Lấy danh sách lô hàng nội bộ (GET /api/agents/my-lots)
+* Điều kiện: Phải đính kèm mã Token JWT trong Header (Authorization: Bearer <Token>).
+* Tham số lọc (Query Params): ?page=1&limit=10&status=CREATED
+* Dữ liệu trả ra: Mảng danh sách các lô hàng có phân trang.
+* Logic xử lý chi tiết:
+   1. Đi qua Middleware bảo mật để giải mã Token JWT, trích xuất ra địa chỉ ví đang gọi (req.user.walletAddress) và vai trò của ví đó.
+   2. Sử dụng thư viện Prisma ORM để dịch sang câu lệnh truy vấn cơ sở dữ liệu có điều kiện rẽ nhánh nâng cao:
+      * Nếu vai trò là FARMER: Thực hiện câu lệnh SQL tìm kiếm tất cả các lô hàng có trường farmerAddress trùng với ví của họ.
+      * Nếu vai trò là các tác nhân trung gian (COOPERATIVE, PROCESSOR...): Tìm kiếm các lô hàng có trường currentActor trùng với ví của họ HOẶC các lô hàng có trạng thái đang chờ xử lý tương ứng với ngành nghề của họ.
+   3. Thực hiện tính toán phân trang bằng hai tham số hình học: skip = (page - 1) * limit và take = limit để tối ưu hóa tốc độ tải trang, tránh tình trạng kéo quá nhiều dữ liệu gây nghẽn RAM hệ thống.
+4. API Tra cứu mã QR Công khai trọn gói (GET /api/public/lots/:id_or_qrcode)
+* Điều kiện: API mở tự do (Public), không cần đăng nhập, không cần truyền mã Token JWT.
+* Dữ liệu nhận vào (URL Param): Chuỗi mã ID số (Ví dụ: 1, 2) HOẶC chuỗi UUID bóc ra từ hành động quét camera mã tem QR vật lý (Ví dụ: c73a-4b21-924c...).
+* Dữ liệu trả ra: Một khối dữ liệu JSON lồng nhau phân tầng chứa đầy đủ thông tin hồ sơ của nông dân và các thông số của 5 giai đoạn kỹ thuật.
+* Logic xử lý chi tiết:
+   1. Backend thực hiện phân tích cú pháp chuỗi tham số truyền vào bằng biểu thức chính quy (Regex):
+      * Nếu chuỗi hoàn toàn là ký tự số (/^\d+$/) $\rightarrow$ Xác định người dùng đang tra cứu bằng mã ID số trực tiếp.
+      * Nếu chuỗi chứa ký tự chữ và dấu gạch ngang $\rightarrow$ Thực hiện câu lệnh truy vấn nhanh vào bảng coffee_lots lấy trường where: { qrCode: param } để đổi từ chuỗi QR sang mã số ID cốt lõi của Blockchain.
+   2. Sử dụng tính năng tăng tốc nạp dữ liệu liên kết (include trong Prisma ORM, tương đương lệnh LEFT JOIN nhiều bảng trong SQL thô) để gộp đồng thời: thông tin tài khoản nông dân (farmer), thông tin đơn vị đang giữ hàng (actor), mảng chi tiết thông số kỹ thuật lưu trong trường JSONB (stageDetails) và toàn bộ các nút lịch sử (timelines).
+   3. Kỹ thuật xử lý an toàn dữ liệu số lớn: Do mã ID trên Blockchain lưu dạng số nguyên 256-bit (uint256), khi đồng bộ về cơ sở dữ liệu PostgreSQL sẽ lưu dạng kiểu dữ liệu số lớn BigInt. Kiểu dữ liệu này không thể tự động ép kiểu sang chuỗi JSON của JavaScript (sẽ gây lỗi chết ứng dụng TypeError: Do not know how to serialize a BigInt). Backend bắt buộc phải đi qua một hàm lọc đệ quy để chuyển toàn bộ các biến số BigInt thành dạng chuỗi ký tự thường (String) trước khi nạp vào hàm res.json() trả về cho Frontend.
